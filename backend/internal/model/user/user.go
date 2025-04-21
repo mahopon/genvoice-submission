@@ -1,11 +1,23 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type User struct {
-	ID          uint      `gorm:"primarykey" json:"id"`
-	CreatedDate time.Time `json:"created_date"`
-	Name        string    `json:"name"`
-	Username    string    `json:"username"`
-	Password    string    `json:"-"`
+	ID          uuid.UUID `gorm:"type:uuid;primarykey" json:"id"`
+	CreatedDate time.Time `gorm:"not null" json:"created_date"`
+	Name        string    `gorm:"not null" json:"name"`
+	Username    string    `gorm:"not null" json:"username"`
+	Password    string    `gorm:"not null" json:"-"`
+	Role        string    `gorm:"not null" json:"role"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	u.ID = uuid.New()
+	u.CreatedDate = time.Now()
+	return nil
 }

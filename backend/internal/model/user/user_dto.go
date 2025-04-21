@@ -21,3 +21,7 @@ type UserResponse struct {
 	StatusCode int    `json:"status"`
 	Message    string `json:"message"`
 }
+
+type GetUserResponse struct {
+	Name string `json:"name"`
+}

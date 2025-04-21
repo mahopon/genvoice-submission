@@ -16,7 +16,7 @@ func CreateUser(user *model.User) error {
 }
 
 // GetUserByUsername fetches a user by their username
-func GetUserById(Id int) (*model.User, error) {
+func GetUserById(Id uuid.UUID) (*model.User, error) {
 	var user model.User
 	if err := db.First(&user, "ID = ?", Id).Error; err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
