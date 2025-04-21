@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=testing
+      - POSTGRES_DB=postgres
+    ports:
+      - 5433:5432
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8090:8080

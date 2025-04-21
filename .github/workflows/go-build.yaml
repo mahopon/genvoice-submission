@@ -1,0 +1,52 @@
+name: Go Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+      - name: Set up Go environment
+        run: |
+          # Set Go environment variables
+          echo "Setting up Go environment"
+          echo "export PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
+          echo "export GOOS=linux" >> $GITHUB_ENV
+          echo "export GOARCH=amd64" >> $GITHUB_ENV
+          echo "export CGO_ENABLED=0" >> $GITHUB_ENV
+
+      - name: Verify Go installation
+        run: |
+          go version
+          go env
+
+      - name: Install dependencies
+        run: |
+          cd backend  # Change directory to backend
+          go mod tidy
+
+      - name: Build
+        run: |
+          cd backend  # Change directory to backend
+          go build -o submission ./cmd/main.go  # Build with output filename submission
+
+      - name: Upload Build Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-build
+          path: ./backend/submission
