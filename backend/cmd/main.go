@@ -1,16 +1,17 @@
 package main
 
 import (
+	"backend/internal/config"
+	repo "backend/internal/repository"
+	"backend/internal/route"
 	"github.com/labstack/echo/v4"
-	"net/http"
+	"os"
 )
 
 func main() {
+	config.LoadConfig()
+	repo.InitDB(os.Getenv("DB_URL"))
 	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"hello": "world",
-		})
-	})
+	route.RegisterRoutes(e)
 	e.Logger.Fatal(e.Start(":8080"))
 }
