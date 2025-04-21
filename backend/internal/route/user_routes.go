@@ -11,4 +11,7 @@ func RegisterUserRoutes(g *echo.Group) {
 	userController := controller.NewUserController(userService)
 
 	g.POST("/login", userController.LoginUser)
+	g.POST("/register", userController.RegisterUser)
+	g.DELETE("/delete/:id", userController.DeleteUser)
+	g.PATCH("/update/:id", userController.UpdateUser)
 }
