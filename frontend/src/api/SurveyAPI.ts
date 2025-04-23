@@ -1,13 +1,13 @@
-import { CreateSurveyRequest, CreateQuestionRequest, CreateAnswerRequest, SurveyResponse } from "../types/Survey";
+import { CreateSurveyRequest, CreateQuestionRequest, CreateAnswerRequest, CollatedSurveyResponse } from "../types/Survey";
 import api from "./Interceptors"
 
 const createSurvey = async (req: CreateSurveyRequest) => {
-    const res = await api.post("/survey", req);
+    const res = await api.post("/survey", req, { withCredentials: true });
     return res.data;
 };
 
-const createQuestion = async (req: CreateQuestionRequest) => {
-    const res = await api.post("/survey/question", req);
+const createQuestion = async (req: CreateQuestionRequest[]) => {
+    const res = await api.post("/survey/question", req, { withCredentials: true });
     return res.data;
 };
 
@@ -17,9 +17,14 @@ const submitAnswer = async (req: CreateAnswerRequest[]) => {
     return res.data;
 };
 
-const getSurveys = async (): Promise<SurveyResponse[]> => {
+const getSurveys = async (): Promise<CollatedSurveyResponse> => {
     const res = await api.get("/survey", { withCredentials: true });
     return res.data;
 }
 
-export { createSurvey, createQuestion, submitAnswer, getSurveys };
+const deleteSurvey = async (surveyId: string) => {
+    const res = await api.delete("/survey/delete/" + surveyId, { withCredentials: true });
+    return res.status == 200;
+}
+
+export { createSurvey, createQuestion, submitAnswer, getSurveys, deleteSurvey };

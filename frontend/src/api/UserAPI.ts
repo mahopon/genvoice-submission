@@ -1,17 +1,16 @@
 import api from "./Interceptors"
-import { RegisterUserRequest, UserLoginRequest } from "../types/User.ts"
+import { PasswordChangeRequest, RegisterUserRequest, UserCreateRequest, UserDataRequest, UserLoginRequest, UserLoginResponse, UserUpdateRequest } from "../types/User.ts"
 
-const loginUser = async (details: UserLoginRequest): Promise<boolean> => {
+
+const loginUser = async (details: UserLoginRequest): Promise<UserLoginResponse | false> => {
     try {
         const res = await api.post("/user/login", details, { withCredentials: true });
-
-        if (res.status === 200) {
-            console.log('Login successful');
-            return true;
-        } else {
-            console.error('Login failed: No access token received');
-            return false;
-        }
+        console.log('Login successful');
+        return {
+            name: res.data.name,
+            id: res.data.id,
+            role: res.data.role
+        };
     } catch (error) {
         console.error('Login failed:', error);
         return false;
@@ -33,11 +32,6 @@ const logoutUser = async (): Promise<boolean> => {
 
 const registerUser = async (req: RegisterUserRequest) => {
     const res = await api.post("/user/register", req)
-    const login: UserLoginRequest = {
-        username: req.username,
-        password: req.password
-    }
-    loginUser(login);
     return res.data;
 }
 
@@ -56,4 +50,34 @@ const checkAuth = () => {
         });
 };
 
-export { loginUser, logoutUser, registerUser, checkAuth };
+const updatePassword = async (user_id: string, req: PasswordChangeRequest): Promise<boolean> => {
+    try {
+        const res = await api.patch("/user/edit/" + user_id, req, { withCredentials: true });
+        return res.status === 200;
+    } catch (err) {
+        console.error("Error during password change:", err);
+        return false;
+    }
+};
+
+const getAllUser = async (): Promise<UserDataRequest[]> => {
+    const res = await api.get<UserDataRequest[]>("/user/all", { withCredentials: true });
+    return res.data;
+}
+
+const deleteUser = async (userId: string): Promise<boolean> => {
+    const res = await api.delete<boolean>("/user/delete/" + userId, { withCredentials: true })
+    return res.status == 200;
+}
+
+const editWholeUser = async (userId: string, details: UserUpdateRequest): Promise<boolean> => {
+    const res = await api.put<boolean>("/user/edit/whole/" + userId, details, { withCredentials: true })
+    return res.status == 200;
+}
+
+const createUser = async (user: UserCreateRequest): Promise<boolean> => {
+    const res = await api.post<boolean>("/user/create", user, { withCredentials: true })
+    return res.status == 200;
+}
+
+export { loginUser, logoutUser, registerUser, checkAuth, updatePassword, getAllUser, deleteUser, editWholeUser, createUser };

@@ -8,7 +8,6 @@ const api: AxiosInstance = axios.create({
 
 // Refresh logic to handle token refresh
 const refreshAuthLogic = (failedRequest: { response: { config: AxiosRequestConfig } | undefined }) => {
-  // Ensure the response is defined before accessing headers
   if (failedRequest.response && failedRequest.response.config) {
     return axios
       // Refresh token request using cookie
