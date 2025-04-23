@@ -18,7 +18,7 @@ func InitDB(connectionString string) {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// // Drop tables (for development purpose, remove them in production)
+	// Drop tables (for development purpose, remove them in production)
 	// db.Migrator().DropTable(&model.User{})     // Rmb to remove!
 	// db.Migrator().DropTable(&model.Survey{})   // Rmb to remove!
 	// db.Migrator().DropTable(&model.Answer{})   // Rmb to remove!
@@ -36,10 +36,10 @@ func InitDB(connectionString string) {
 	pass3, hash3, _ := util.GenerateFromPassword("Userpassword123!")
 	pass4, hash4, _ := util.GenerateFromPassword("adminpassword123!")
 	users := []model.User{
-		{Name: "User One", Username: "user1", Password: hash1 + ":" + pass1, Role: "user"},
-		{Name: "User Two", Username: "user2", Password: hash2 + ":" + pass2, Role: "user"},
-		{Name: "User Three", Username: "user3", Password: hash3 + ":" + pass3, Role: "user"},
-		{Name: "Admin User", Username: "admin", Password: hash4 + ":" + pass4, Role: "admin"},
+		{Name: "User One", Username: "user1", Password: hash1 + ":" + pass1, Role: "USER"},
+		{Name: "User Two", Username: "user2", Password: hash2 + ":" + pass2, Role: "USER"},
+		{Name: "User Three", Username: "user3", Password: hash3 + ":" + pass3, Role: "USER"},
+		{Name: "Admin User", Username: "admin", Password: hash4 + ":" + pass4, Role: "ADMIN"},
 	}
 
 	for _, user := range users {
