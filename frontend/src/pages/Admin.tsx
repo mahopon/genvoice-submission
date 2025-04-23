@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router';
+import UserTable from '../components/UserTable';
 
 const Admin: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated === null) return;
@@ -12,10 +13,14 @@ const Admin: React.FC = () => {
       console.log('User is not authenticated, redirecting...');
       navigate('/login');
     }
+    if (role != "ADMIN") {
+      console.log('User is not admin role, redirecting...');
+      navigate('/');
+    }
   }, [isAuthenticated, navigate]);
 
   return (
-    <div>Admin</div>
+    <UserTable />
   )
 }
 

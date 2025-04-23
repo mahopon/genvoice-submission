@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import SettingsForm from '../components/SettingsForm';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const Settings: React.FC = () => {
     }
   }, [isAuthenticated, navigate]);
   return (
-    <div>Settings</div>
+    <SettingsForm />
   )
 }
 
