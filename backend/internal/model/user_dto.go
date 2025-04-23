@@ -6,6 +6,7 @@ type CreateUserRequest struct {
 	Name     string `json:"name" validate:"required"`
 	Username string `json:"username" validate:"required"`
 	Password string `json:"password" validate:"required"`
+	Role     string `json:"role,omitempty"`
 }
 
 type LoginUserRequest struct {
@@ -13,10 +14,9 @@ type LoginUserRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
-type UpdateUserRequest struct {
-	Name     string `json:"name,omitempty"`
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
+type UpdateUserPasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 type UserResponse struct {
@@ -27,4 +27,11 @@ type UserResponse struct {
 type GetUserResponse struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
+}
+
+type UpdateUserRequest struct {
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
 }

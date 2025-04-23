@@ -12,9 +12,11 @@ import (
 type UserService interface {
 	LoginUser(user model.LoginUserRequest) (*model.User, error)
 	RegisterUser(user model.CreateUserRequest) error
-	UpdateUser(id string, user model.UpdateUserRequest) error
+	UpdateUser(id string, user model.UpdateUserPasswordRequest) error
+	UpdateWholeUser(userId string, request model.UpdateUserRequest) error
 	DeleteUser(id string) error
 	GetUser(id string) (*model.GetUserResponse, error)
+	GetAllUser() (*[]model.User, error)
 }
 
 type userService struct{}
@@ -48,18 +50,25 @@ func (s *userService) RegisterUser(user model.CreateUserRequest) error {
 		return err
 	}
 
+	var role string
+	if user.Role == "" {
+		role = "USER"
+	} else {
+		role = user.Role
+	}
+
 	password := salt + ":" + hash
 	newUser := &model.User{
 		Name:     user.Name,
 		Username: user.Username,
 		Password: password,
-		Role:     "USER",
+		Role:     role,
 	}
 
 	return repository.CreateUser(newUser)
 }
 
-func (s *userService) UpdateUser(id string, update model.UpdateUserRequest) error {
+func (s *userService) UpdateUser(id string, update model.UpdateUserPasswordRequest) error {
 	userID, err := uuid.Parse(id)
 	if err != nil {
 		return err
@@ -70,8 +79,22 @@ func (s *userService) UpdateUser(id string, update model.UpdateUserRequest) erro
 		return err
 	}
 
-	existingUser.Name = update.Name
-	return repository.UpdateUser(existingUser)
+	salt, hash := util.SplitPasswordSalt(existingUser.Password)
+	inputPassword, _ := util.GenerateFromPasswordWithSalt(update.CurrentPassword, salt)
+
+	if hash != inputPassword {
+		return errors.New("current password wrong")
+	}
+
+	newPassword, salt, _ := util.GenerateFromPassword(update.NewPassword)
+	stitchedNewPassword := salt + ":" + newPassword
+
+	err = repository.UpdateUser(existingUser.ID, stitchedNewPassword)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *userService) DeleteUser(id string) error {
@@ -97,4 +120,28 @@ func (s *userService) GetUser(id string) (*model.GetUserResponse, error) {
 		ID:   user.ID,
 		Name: user.Name,
 	}, nil
+}
+
+func (s *userService) GetAllUser() (*[]model.User, error) {
+	var users *[]model.User
+	users, err := repository.GetAllUser()
+	if err != nil {
+		return nil, errors.New("internal error")
+	}
+	return users, nil
+}
+
+func (s *userService) UpdateWholeUser(userId string, request model.UpdateUserRequest) error {
+	parsedID, _ := uuid.Parse(userId)
+
+	if request.Password != "" {
+		hash, salt, _ := util.GenerateFromPassword(request.Password)
+		request.Password = salt + ":" + hash
+	}
+
+	err := repository.UpdateWholeUser(parsedID, &request)
+	if err != nil {
+		return err
+	}
+	return nil
 }

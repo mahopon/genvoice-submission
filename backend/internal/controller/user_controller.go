@@ -69,6 +69,7 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, echo.Map{
 		"id":   dbUser.ID,
 		"name": dbUser.Name,
+		"role": dbUser.Role,
 	})
 }
 
@@ -157,27 +158,46 @@ func (c *UserController) RegisterUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 	if err := c.UserService.RegisterUser(user); err != nil {
-		return echo.ErrBadRequest
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Please choose another username"})
 	}
 	return ctx.JSON(http.StatusOK, nil)
 }
 
 func (c *UserController) DeleteUser(ctx echo.Context) error {
-	if err := c.UserService.DeleteUser(ctx.Param("id")); err != nil {
+	if err := c.UserService.DeleteUser(ctx.Param("userId")); err != nil {
 		return echo.ErrBadRequest
 	}
 	return ctx.JSON(http.StatusOK, nil)
 }
 
 func (c *UserController) UpdateUser(ctx echo.Context) error {
-	var user model.UpdateUserRequest
-	if err := ctx.Bind(&user); err != nil {
+	var password model.UpdateUserPasswordRequest
+
+	if err := ctx.Bind(&password); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
-	if err := c.UserService.UpdateUser(ctx.Param("id"), user); err != nil {
-		return echo.ErrBadRequest
+
+	tokenCookie, err := ctx.Request().Cookie("access_token")
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
 	}
-	return ctx.JSON(http.StatusOK, nil)
+
+	claims, err := util.ValidateJWT(tokenCookie.Value)
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+	}
+
+	if claims.Subject == ctx.Param("id") || claims.Role == "ADMIN" {
+		if err := c.UserService.UpdateUser(ctx.Param("id"), password); err != nil {
+			if err.Error() == "current password wrong" {
+				return ctx.JSON(http.StatusBadRequest, err.Error())
+			} else {
+				return echo.ErrInternalServerError
+			}
+		}
+	}
+
+	return ctx.NoContent(http.StatusOK)
 }
 
 func (c *UserController) CheckAuthStatus(ctx echo.Context) error {
@@ -201,6 +221,29 @@ func (c *UserController) CheckAuthStatus(ctx echo.Context) error {
 	}
 
 	return ctx.Redirect(http.StatusFound, "/api/user/refresh")
+}
+
+func (c *UserController) GetAllUser(ctx echo.Context) error {
+	users, err := c.UserService.GetAllUser()
+	if err != nil {
+		return echo.ErrInternalServerError
+	}
+
+	return ctx.JSON(http.StatusOK, users)
+}
+
+func (c *UserController) UpdateWholeUser(ctx echo.Context) error {
+	var req model.UpdateUserRequest
+	if err := ctx.Bind(&req); err != nil {
+		return echo.ErrBadRequest
+	}
+	id := ctx.Param("userId")
+
+	err := c.UserService.UpdateWholeUser(id, req)
+	if err != nil {
+		return echo.ErrInternalServerError
+	}
+	return ctx.NoContent(http.StatusOK)
 }
 
 func (c *UserController) setTokenCookies(ctx echo.Context, accessToken, refreshToken string) {
