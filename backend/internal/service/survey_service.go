@@ -17,7 +17,7 @@ type SurveyService interface {
 	GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, []*model.SurveyResponse, error)
 	GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error)
 	DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error
-	DeleteSurveyByID(surveyID uuid.UUID) error
+	DeleteSurveyByID(userId uuid.UUID, surveyID uuid.UUID) error
 }
 
 type surveyService struct{}
@@ -138,8 +138,14 @@ func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req model.CreateAns
 	return nil
 }
 
-func (s *surveyService) DeleteSurveyByID(surveyID uuid.UUID) error {
-	err := repo.DeleteSurveyByID(surveyID)
+func (s *surveyService) DeleteSurveyByID(userId uuid.UUID, surveyID uuid.UUID) error {
+	survey, err := repo.GetSurveyById(surveyID)
+
+	if survey.User.ID != userId {
+		return fmt.Errorf("invalid request")
+	}
+
+	err = repo.DeleteSurveyByID(surveyID)
 	if err != nil {
 		return fmt.Errorf("failed to delete survey")
 	}

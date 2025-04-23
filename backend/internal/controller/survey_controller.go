@@ -188,15 +188,31 @@ func (c *SurveyController) GetAnswersOfSurveyQuestion(ctx echo.Context) error {
 
 func (c *SurveyController) DeleteSurveyByID(ctx echo.Context) error {
 	surveyIDParam := ctx.Param("surveyId")
-	log.Println("hi")
+
+	tokenString, err := ctx.Cookie("access_token")
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return echo.ErrUnauthorized
+	}
+
+	claims, err := util.ValidateJWT(tokenString.Value)
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid or expired access token"})
+	}
+
+	userID := claims.Subject
+	if userID == "" {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+	}
 
 	surveyID, err := uuid.Parse(surveyIDParam)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid survey ID"})
 	}
+	parsedUUID, _ := uuid.Parse(userID)
 
-	err = c.SurveyService.DeleteSurveyByID(surveyID)
+	err = c.SurveyService.DeleteSurveyByID(parsedUUID, surveyID)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
