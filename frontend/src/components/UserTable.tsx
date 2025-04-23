@@ -134,7 +134,7 @@ const UserTable: React.FC = () => {
         {
             title: "Password",
             key: "password",
-            render: (text, record) =>
+            render: (_, record) =>
                 isEditing(record) ? (
                     <Input.Password
                         value={editedRow?.password || ''}
