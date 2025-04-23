@@ -5,9 +5,8 @@ import (
 	"backend/internal/middleware"
 	repo "backend/internal/repository"
 	"backend/internal/route"
-	"os"
-
 	"github.com/labstack/echo/v4"
+	"os"
 )
 
 func main() {
@@ -16,5 +15,6 @@ func main() {
 	e := echo.New()
 	route.RegisterRoutes(e)
 	e.Use(middleware.CORS())
+	e.Use(middleware.LogResponseTimeMiddleware)
 	e.Logger.Fatal(e.Start(":8080"))
 }
