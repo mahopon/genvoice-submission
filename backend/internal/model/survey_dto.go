@@ -19,7 +19,6 @@ type CreateQuestionRequest struct {
 type CreateAnswerRequest struct {
 	SurveyID   uuid.UUID `json:"survey_id"`
 	QuestionID int       `json:"question_id"`
-	UserID     uuid.UUID `json:"user_id"`
 	Answer     string    `json:"answer"`
 }
 

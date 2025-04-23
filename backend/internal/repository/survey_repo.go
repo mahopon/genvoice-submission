@@ -2,7 +2,9 @@ package repository
 
 import (
 	"backend/internal/model"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm/clause"
 )
 
 // CreateSurvey creates a new survey in the database.
@@ -17,7 +19,10 @@ func CreateQuestion(question *model.Question) error {
 
 // CreateAnswer creates a new answer for a question in the database.
 func CreateAnswer(answer *model.Answer) error {
-	return db.Create(answer).Error
+	return db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "question_id"}, {Name: "survey_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"answer"}),
+	}).Create(answer).Error
 }
 
 // GetAllSurveys() retrieves all available surveys
@@ -26,6 +31,22 @@ func GetAllSurveys() ([]*model.Survey, error) {
 
 	// Preload related data (questions and answers) in one query
 	if err := db.Preload("User").Preload("Questions").Find(&surveys).Error; err != nil {
+		return nil, err
+	}
+
+	return surveys, nil
+}
+
+// GetAllSurveysDoneByUser retrieves all available surveys that have been answered by a specific user
+func GetAllSurveysDoneByUser(userId uuid.UUID) ([]*model.Survey, error) {
+	var surveys []*model.Survey
+
+	err := db.
+		Preload("Questions.Answers", "user_id = ?", userId).
+		Preload("User").
+		Preload("Questions").
+		Find(&surveys).Error
+	if err != nil {
 		return nil, err
 	}
 
@@ -69,4 +90,12 @@ func GetAnswersByUserID(userID uuid.UUID) ([]model.Answer, error) {
 		return nil, err
 	}
 	return answers, nil
+}
+
+// DeleteAnswer deletes a specific record by a specific user.
+func DeleteAnswer(userID uuid.UUID, surveyID uuid.UUID, questionID int) error {
+	return db.
+		Where("user_id = ? AND survey_id = ? AND question_id = ?", userID, surveyID, questionID).
+		Delete(&model.Answer{}).
+		Error
 }

@@ -13,9 +13,11 @@ import (
 type SurveyService interface {
 	CreateSurvey(newSurvey model.CreateSurveyRequest) error
 	CreateQuestion(newQuestion model.CreateQuestionRequest) error
-	CreateAnswer(newAnswer model.CreateAnswerRequest) error
+	CreateAnswer(userId uuid.UUID, newAnswer model.CreateAnswerRequest) error
 	GetAllSurveys() ([]*model.SurveyResponse, error)
+	GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, error)
 	GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error)
+	DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error
 }
 
 type surveyService struct{}
@@ -48,14 +50,14 @@ func (s *surveyService) CreateQuestion(newQuestion model.CreateQuestionRequest) 
 	return nil
 }
 
-func (s *surveyService) CreateAnswer(newAnswer model.CreateAnswerRequest) error {
+func (s *surveyService) CreateAnswer(userId uuid.UUID, newAnswer model.CreateAnswerRequest) error {
 	ans, err := util.DecodeAnswerFromBase64(newAnswer.Answer)
 	if err != nil {
 		log.Println("DecodeAnswerFromBase64 error:", err)
 		return fmt.Errorf("invalid answer format")
 	}
 	answer := &model.Answer{
-		UserID:     newAnswer.UserID,
+		UserID:     userId,
 		SurveyID:   newAnswer.SurveyID,
 		QuestionID: newAnswer.QuestionID,
 		Answer:     ans,
@@ -68,53 +70,25 @@ func (s *surveyService) CreateAnswer(newAnswer model.CreateAnswerRequest) error 
 }
 
 func (s *surveyService) GetAllSurveys() ([]*model.SurveyResponse, error) {
-	// Fetch all surveys with preloaded related questions and answers
 	surveys, err := repo.GetAllSurveys()
 	if err != nil {
 		log.Println("GetAllSurveys error:", err)
 		return nil, fmt.Errorf("could not retrieve surveys")
 	}
 
-	// Prepare a slice to hold the transformed SurveyResponse objects
-	var surveyResponses []*model.SurveyResponse
-	for _, survey := range surveys {
-		// Transform the Survey into SurveyResponse
-		surveyResponse := &model.SurveyResponse{
-			ID:          survey.ID,
-			Name:        survey.Name,
-			CreatedDate: survey.CreatedDate,
-			CreatedBy:   survey.User.Name,
-		}
+	surveyResponses := transformDBtoOutput(surveys)
 
-		// Transform Questions into QuestionResponse
-		for _, question := range survey.Questions {
-			questionResponse := model.QuestionResponse{
-				ID:          question.ID,
-				Question:    question.Question,
-				CreatedDate: question.CreatedDate,
-				SurveyID:    survey.ID,
-			}
+	return surveyResponses, nil
+}
 
-			// Transform Answers into AnswerResponse
-			for _, answer := range question.Answers {
-				answerResponse := model.AnswerResponse{
-					ID:         answer.ID,
-					UserID:     answer.UserID,
-					SurveyID:   answer.SurveyID,
-					QuestionID: answer.QuestionID,
-					Answer:     string(answer.Answer),
-				}
-				// Append the AnswerResponse to the Answers slice of the QuestionResponse
-				questionResponse.Answers = append(questionResponse.Answers, answerResponse)
-			}
-
-			// Append the QuestionResponse to the Questions slice of the SurveyResponse
-			surveyResponse.Questions = append(surveyResponse.Questions, questionResponse)
-		}
-
-		// Append the SurveyResponse to the final slice
-		surveyResponses = append(surveyResponses, surveyResponse)
+func (s *surveyService) GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, error) {
+	surveys, err := repo.GetAllSurveysDoneByUser(userId)
+	if err != nil {
+		log.Println("GetAllSurveys error:", err)
+		return nil, fmt.Errorf("could not retrieve surveys")
 	}
+
+	surveyResponses := transformDBtoOutput(surveys)
 
 	return surveyResponses, nil
 }
@@ -159,4 +133,56 @@ func (s *surveyService) GetAnswersByUser(userID uuid.UUID) ([]model.AnswerRespon
 	}
 
 	return response, nil
+}
+
+func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error {
+	err := repo.DeleteAnswer(userId, req.SurveyID, req.QuestionID)
+	if err != nil {
+		return fmt.Errorf("failed to delete answer")
+	}
+	return nil
+}
+
+func transformDBtoOutput(surveys []*model.Survey) []*model.SurveyResponse {
+	// Prepare a slice to hold the transformed SurveyResponse objects
+	var surveyResponses []*model.SurveyResponse
+	for _, survey := range surveys {
+		// Transform the Survey into SurveyResponse
+		surveyResponse := &model.SurveyResponse{
+			ID:          survey.ID,
+			Name:        survey.Name,
+			CreatedDate: survey.CreatedDate,
+			CreatedBy:   survey.User.Name,
+		}
+
+		// Transform Questions into QuestionResponse
+		for _, question := range survey.Questions {
+			questionResponse := model.QuestionResponse{
+				ID:          question.ID,
+				Question:    question.Question,
+				CreatedDate: question.CreatedDate,
+				SurveyID:    survey.ID,
+			}
+
+			// Transform Answers into AnswerResponse
+			for _, answer := range question.Answers {
+				answerResponse := model.AnswerResponse{
+					ID:         answer.ID,
+					UserID:     answer.UserID,
+					SurveyID:   answer.SurveyID,
+					QuestionID: answer.QuestionID,
+					Answer:     string(util.EncodeAnswerToBase64(answer.Answer)),
+				}
+				// Append the AnswerResponse to the Answers slice of the QuestionResponse
+				questionResponse.Answers = append(questionResponse.Answers, answerResponse)
+			}
+
+			// Append the QuestionResponse to the Questions slice of the SurveyResponse
+			surveyResponse.Questions = append(surveyResponse.Questions, questionResponse)
+		}
+
+		// Append the SurveyResponse to the final slice
+		surveyResponses = append(surveyResponses, surveyResponse)
+	}
+	return surveyResponses
 }

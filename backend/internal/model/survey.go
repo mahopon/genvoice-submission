@@ -30,12 +30,12 @@ type Question struct {
 
 type Answer struct {
 	ID     int       `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
+	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index:idx_user_question_survey,unique"`
 
-	SurveyID uuid.UUID `json:"survey_id" gorm:"type:uuid;not null;index"`
+	SurveyID uuid.UUID `json:"survey_id" gorm:"type:uuid;not null;index:idx_user_question_survey,unique"`
 	Survey   Survey    `json:"survey" gorm:"foreignKey:SurveyID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
-	QuestionID int      `json:"question_id" gorm:"not null;index"`
+	QuestionID int      `json:"question_id" gorm:"not null;index:idx_user_question_survey,unique"`
 	Question   Question `json:"question" gorm:"foreignKey:QuestionID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	Answer []byte `json:"answer" gorm:"type:bytea"`

@@ -14,7 +14,7 @@ func RegisterSurveyRoutes(g *echo.Group) {
 	// POST /api/survey
 	g.POST("", surveyController.CreateSurvey)
 	// GET /api/survey
-	g.GET("", surveyController.GetAllSurveys)
+	g.GET("", surveyController.GetSurveysDone)
 	// GET /api/survey/:surveyId/:questionId/answer
 	g.GET("/:surveyId/:questionId/answer", surveyController.GetAnswersOfSurveyQuestion)
 	// POST /api/survey/question

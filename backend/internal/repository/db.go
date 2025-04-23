@@ -18,11 +18,11 @@ func InitDB(connectionString string) {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// Drop tables (for development purpose, remove them in production)
-	db.Migrator().DropTable(&model.User{})     // Rmb to remove!
-	db.Migrator().DropTable(&model.Survey{})   // Rmb to remove!
-	db.Migrator().DropTable(&model.Answer{})   // Rmb to remove!
-	db.Migrator().DropTable(&model.Question{}) // Rmb to remove!
+	// // Drop tables (for development purpose, remove them in production)
+	// db.Migrator().DropTable(&model.User{})     // Rmb to remove!
+	// db.Migrator().DropTable(&model.Survey{})   // Rmb to remove!
+	// db.Migrator().DropTable(&model.Answer{})   // Rmb to remove!
+	// db.Migrator().DropTable(&model.Question{}) // Rmb to remove!
 
 	// Migrate the schema
 	err = db.AutoMigrate(&model.User{}, &model.Survey{}, &model.Answer{}, &model.Question{})

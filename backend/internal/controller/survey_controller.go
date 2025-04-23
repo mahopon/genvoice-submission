@@ -3,6 +3,7 @@ package controller
 import (
 	"backend/internal/model"
 	"backend/internal/service"
+	"backend/internal/util"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,6 +23,7 @@ func NewSurveyController(s service.SurveyService) *SurveyController {
 func (c *SurveyController) CreateSurvey(ctx echo.Context) error {
 	var req model.CreateSurveyRequest
 	if err := ctx.Bind(&req); err != nil {
+		log.Printf("ERR: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
@@ -44,6 +46,7 @@ func (c *SurveyController) CreateSurvey(ctx echo.Context) error {
 func (c *SurveyController) CreateQuestion(ctx echo.Context) error {
 	var req model.CreateQuestionRequest
 	if err := ctx.Bind(&req); err != nil {
+		log.Printf("ERR: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
@@ -64,61 +67,94 @@ func (c *SurveyController) CreateQuestion(ctx echo.Context) error {
 }
 
 func (c *SurveyController) CreateAnswer(ctx echo.Context) error {
-	var req model.CreateAnswerRequest
+	var req []model.CreateAnswerRequest
 	if err := ctx.Bind(&req); err != nil {
+		log.Printf("ERR: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
-	if req.SurveyID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "SurveyID cannot be nil"})
-	}
-	if req.QuestionID == 0 {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "QuestionID cannot be 0"})
-	}
-	if req.UserID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "UserID cannot be nil"})
-	}
-	if req.Answer == "" {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Answer cannot be empty"})
-	}
-
-	err := c.SurveyService.CreateAnswer(req)
+	// Extract the JWT access_token from cookies
+	tokenString, err := ctx.Cookie("access_token")
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		log.Printf("ERR: %v", err)
+		return echo.ErrUnauthorized
 	}
 
-	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Answer created successfully"})
-}
-
-func (c *SurveyController) AnswerQuestion(ctx echo.Context) error {
-	var req model.CreateAnswerRequest
-	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
-	}
-
-	if req.SurveyID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "SurveyID cannot be nil"})
-	}
-	if req.QuestionID == 0 {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "QuestionID cannot be 0"})
-	}
-	if req.UserID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "UserID cannot be nil"})
-	}
-	if req.Answer == "" {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Answer cannot be empty"})
-	}
-
-	err := c.SurveyService.CreateAnswer(req)
+	// Validate and extract the UserID from the JWT token using ValidateJWT function
+	claims, err := util.ValidateJWT(tokenString.Value)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid or expired access token"})
 	}
 
-	return ctx.JSON(http.StatusOK, echo.Map{"message": "Answer recorded successfully"})
+	// Get the UserID from the claims (assuming it's stored in "sub")
+	userID := claims.Subject
+	if userID == "" {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+	}
+
+	// Loop through each request item to perform validation and fill the UserID
+	for _, answerReq := range req {
+		// Check if SurveyID is valid
+		if answerReq.SurveyID == uuid.Nil {
+			return ctx.NoContent(http.StatusBadRequest)
+		}
+		// Check if QuestionID is valid
+		if answerReq.QuestionID == 0 {
+			return ctx.NoContent(http.StatusBadRequest)
+		}
+
+		parsedUUID, err := uuid.Parse(userID)
+		if err != nil {
+			return echo.ErrBadRequest
+		}
+
+		// If answer is empty, delete instead
+		if answerReq.Answer == "" {
+			err = c.SurveyService.DeleteAnswerByUser(parsedUUID, answerReq)
+			if err != nil {
+				return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+			}
+		} else {
+			err = c.SurveyService.CreateAnswer(parsedUUID, answerReq)
+			if err != nil {
+				return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+			}
+		}
+
+	}
+
+	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Answers sent successfully"})
 }
 
 func (c *SurveyController) GetAllSurveys(ctx echo.Context) error {
 	surveys, err := c.SurveyService.GetAllSurveys()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, surveys)
+}
+
+func (c *SurveyController) GetSurveysDone(ctx echo.Context) error {
+
+	tokenString, err := ctx.Cookie("access_token")
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return echo.ErrUnauthorized
+	}
+
+	claims, err := util.ValidateJWT(tokenString.Value)
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid or expired access token"})
+	}
+
+	userID := claims.Subject
+	if userID == "" {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+	}
+
+	parsedUUID, _ := uuid.Parse(userID)
+
+	surveys, err := c.SurveyService.GetSurveysDoneByUser(parsedUUID)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
