@@ -7,7 +7,7 @@ import (
 
 func CORS() echo.MiddlewareFunc {
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{"https://mahopon.github.io"},
+		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowCredentials: true,
 		AllowHeaders: []string{
 			echo.HeaderOrigin,

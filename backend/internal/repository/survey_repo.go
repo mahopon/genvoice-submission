@@ -132,8 +132,8 @@ func DeleteAnswer(userID uuid.UUID, surveyID uuid.UUID, questionID int) error {
 
 // GetSurveyById gets a survey by its ID.
 func GetSurveyById(surveyID uuid.UUID) (*model.Survey, error) {
-	var survey *model.Survey
-	if err := db.Preload("User").Where("ID = ?", surveyID).Model(&survey).Error; err != nil {
+	survey := &model.Survey{}
+	if err := db.Preload("User").Where("id = ?", surveyID).First(survey).Error; err != nil {
 		return nil, err
 	}
 	return survey, nil

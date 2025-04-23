@@ -210,7 +210,8 @@ func (c *SurveyController) DeleteSurveyByID(ctx echo.Context) error {
 		log.Printf("Error: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid survey ID"})
 	}
-	parsedUUID, err := uuid.Parse(userID)
+
+	parsedUUID, _ := uuid.Parse(userID)
 
 	err = c.SurveyService.DeleteSurveyByID(parsedUUID, surveyID)
 	if err != nil {

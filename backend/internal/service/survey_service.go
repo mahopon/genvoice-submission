@@ -139,8 +139,9 @@ func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req model.CreateAns
 }
 
 func (s *surveyService) DeleteSurveyByID(userId uuid.UUID, surveyID uuid.UUID) error {
-	survey, err := repo.GetSurveyById(surveyID)
 
+	survey, err := repo.GetSurveyById(surveyID)
+	log.Printf("ERR: %v", survey)
 	if err != nil || survey.CreatedBy != userId {
 		return fmt.Errorf("invalid request")
 	}
