@@ -12,7 +12,7 @@ type Survey struct {
 	Name        string    `json:"name" gorm:"not null"`
 	CreatedDate time.Time `json:"created_date" gorm:"not null"`
 	CreatedBy   uuid.UUID `json:"created_by" gorm:"type:uuid;not null"`
-	User        User      `json:"user" gorm:"foreignKey:CreatedBy;references:ID"`
+	User        User      `json:"user" gorm:"foreignKey:CreatedBy;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	Questions []Question `json:"questions" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;foreignKey:SurveyID"`
 }

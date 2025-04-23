@@ -4,6 +4,7 @@ import (
 	"backend/internal/model"
 	"backend/internal/service"
 	"backend/internal/util"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -21,41 +22,52 @@ func NewSurveyController(s service.SurveyService) *SurveyController {
 }
 
 func (c *SurveyController) CreateSurvey(ctx echo.Context) error {
+	tokenString, err := ctx.Cookie("access_token")
+	if err != nil {
+		log.Printf("ERR: %v", err)
+		return echo.ErrUnauthorized
+	}
+
+	claims, err := util.ValidateJWT(tokenString.Value)
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid or expired access token"})
+	}
+
 	var req model.CreateSurveyRequest
 	if err := ctx.Bind(&req); err != nil {
 		log.Printf("ERR: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
+	req.UserID, _ = uuid.Parse(claims.Subject)
+
 	// Manual validation
-	if req.UserID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "UserID cannot be nil"})
-	}
 	if req.Name == "" {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Name cannot be empty"})
 	}
 
-	err := c.SurveyService.CreateSurvey(req)
+	id, err := c.SurveyService.CreateSurvey(req)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
-	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Survey created successfully"})
+	return ctx.JSON(http.StatusCreated, echo.Map{"survey_id": id})
 }
 
 func (c *SurveyController) CreateQuestion(ctx echo.Context) error {
-	var req model.CreateQuestionRequest
+	var req []model.CreateQuestionRequest
 	if err := ctx.Bind(&req); err != nil {
 		log.Printf("ERR: %v", err)
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
-	// Manual validation
-	if req.SurveyID == uuid.Nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "SurveyID cannot be nil"})
-	}
-	if req.Question == "" {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Question cannot be empty"})
+	for _, question := range req {
+		if question.SurveyID == uuid.Nil {
+			return ctx.JSON(http.StatusBadRequest, echo.Map{"error": fmt.Sprintln("SurveyID cannot be empty")})
+		}
+		if question.Question == "" {
+			return ctx.JSON(http.StatusBadRequest, echo.Map{"error": fmt.Sprintln("Question cannot be empty")})
+		}
 	}
 
 	err := c.SurveyService.CreateQuestion(req)
@@ -63,7 +75,7 @@ func (c *SurveyController) CreateQuestion(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 
-	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Question created successfully"})
+	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Question(s) created successfully"})
 }
 
 func (c *SurveyController) CreateAnswer(ctx echo.Context) error {
@@ -154,11 +166,11 @@ func (c *SurveyController) GetSurveysDone(ctx echo.Context) error {
 
 	parsedUUID, _ := uuid.Parse(userID)
 
-	surveys, err := c.SurveyService.GetSurveysDoneByUser(parsedUUID)
+	userSurveys, otherSurveys, err := c.SurveyService.GetSurveysDoneByUser(parsedUUID)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	return ctx.JSON(http.StatusOK, surveys)
+	return ctx.JSON(http.StatusOK, echo.Map{"user_made": userSurveys, "others_made": otherSurveys})
 }
 
 func (c *SurveyController) GetAnswersOfSurveyQuestion(ctx echo.Context) error {
@@ -180,4 +192,21 @@ func (c *SurveyController) GetAnswersOfSurveyQuestion(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	return ctx.JSON(http.StatusOK, answers)
+}
+
+func (c *SurveyController) DeleteSurveyByID(ctx echo.Context) error {
+	surveyIDParam := ctx.Param("surveyId")
+	log.Println("hi")
+
+	surveyID, err := uuid.Parse(surveyIDParam)
+	if err != nil {
+		log.Printf("Error: %v", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid survey ID"})
+	}
+
+	err = c.SurveyService.DeleteSurveyByID(surveyID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
+	}
+	return nil
 }

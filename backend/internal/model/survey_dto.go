@@ -7,8 +7,9 @@ import (
 )
 
 type CreateSurveyRequest struct {
-	UserID uuid.UUID `json:"user_id"`
-	Name   string    `json:"name"`
+	SurveyID uuid.UUID `json:"survey_id,omitempty"`
+	UserID   uuid.UUID `json:"user_id"`
+	Name     string    `json:"name"`
 }
 
 type CreateQuestionRequest struct {
@@ -23,11 +24,12 @@ type CreateAnswerRequest struct {
 }
 
 type SurveyResponse struct {
-	ID          uuid.UUID          `json:"id"`
-	Name        string             `json:"name"`
-	CreatedDate time.Time          `json:"created_date"`
-	CreatedBy   string             `json:"created_by"`
-	Questions   []QuestionResponse `json:"questions,omitempty"`
+	ID            uuid.UUID          `json:"id"`
+	Name          string             `json:"name"`
+	CreatedDate   time.Time          `json:"created_date"`
+	CreatedBy     string             `json:"created_by"`
+	CreatedByName string             `json:"created_by_name"`
+	Questions     []QuestionResponse `json:"questions,omitempty"`
 }
 
 type QuestionResponse struct {

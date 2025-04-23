@@ -11,13 +11,14 @@ import (
 )
 
 type SurveyService interface {
-	CreateSurvey(newSurvey model.CreateSurveyRequest) error
-	CreateQuestion(newQuestion model.CreateQuestionRequest) error
+	CreateSurvey(newSurvey model.CreateSurveyRequest) (uuid.UUID, error)
+	CreateQuestion(newQuestion []model.CreateQuestionRequest) error
 	CreateAnswer(userId uuid.UUID, newAnswer model.CreateAnswerRequest) error
 	GetAllSurveys() ([]*model.SurveyResponse, error)
-	GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, error)
+	GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, []*model.SurveyResponse, error)
 	GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error)
 	DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error
+	DeleteSurveyByID(surveyID uuid.UUID) error
 }
 
 type surveyService struct{}
@@ -26,27 +27,33 @@ func NewSurveyService() SurveyService {
 	return &surveyService{}
 }
 
-func (s *surveyService) CreateSurvey(newSurvey model.CreateSurveyRequest) error {
+func (s *surveyService) CreateSurvey(newSurvey model.CreateSurveyRequest) (uuid.UUID, error) {
 	survey := &model.Survey{
 		CreatedBy: newSurvey.UserID,
 		Name:      newSurvey.Name,
 	}
 	if err := repo.CreateSurvey(survey); err != nil {
 		log.Println("CreateSurvey error:", err)
-		return fmt.Errorf("failed to create survey")
+		return uuid.Nil, fmt.Errorf("failed to create survey")
 	}
-	return nil
+	return survey.ID, nil
 }
 
-func (s *surveyService) CreateQuestion(newQuestion model.CreateQuestionRequest) error {
-	question := &model.Question{
-		Question: newQuestion.Question,
-		SurveyID: newQuestion.SurveyID,
+func (s *surveyService) CreateQuestion(newQuestions []model.CreateQuestionRequest) error {
+	var questions []*model.Question
+
+	for _, q := range newQuestions {
+		questions = append(questions, &model.Question{
+			Question: q.Question,
+			SurveyID: q.SurveyID,
+		})
 	}
-	if err := repo.CreateQuestion(question); err != nil {
-		log.Println("CreateQuestion error:", err)
-		return fmt.Errorf("failed to create question")
+
+	if err := repo.CreateQuestion(questions); err != nil {
+		log.Println("CreateQuestions error:", err)
+		return fmt.Errorf("failed to create questions: %v", err)
 	}
+
 	return nil
 }
 
@@ -81,16 +88,17 @@ func (s *surveyService) GetAllSurveys() ([]*model.SurveyResponse, error) {
 	return surveyResponses, nil
 }
 
-func (s *surveyService) GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, error) {
-	surveys, err := repo.GetAllSurveysDoneByUser(userId)
+func (s *surveyService) GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, []*model.SurveyResponse, error) {
+	userSurveys, otherSurveys, err := repo.GetAllSurveysDoneByUserSorted(userId)
 	if err != nil {
 		log.Println("GetAllSurveys error:", err)
-		return nil, fmt.Errorf("could not retrieve surveys")
+		return nil, nil, fmt.Errorf("could not retrieve surveys")
 	}
 
-	surveyResponses := transformDBtoOutput(surveys)
+	transformUserSurveys := transformDBtoOutput(userSurveys)
+	transformOtherSurveys := transformDBtoOutput(otherSurveys)
 
-	return surveyResponses, nil
+	return transformUserSurveys, transformOtherSurveys, nil
 }
 
 func (s *surveyService) GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error) {
@@ -143,16 +151,25 @@ func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req model.CreateAns
 	return nil
 }
 
+func (s *surveyService) DeleteSurveyByID(surveyID uuid.UUID) error {
+	err := repo.DeleteSurveyByID(surveyID)
+	if err != nil {
+		return fmt.Errorf("failed to delete survey")
+	}
+	return nil
+}
+
 func transformDBtoOutput(surveys []*model.Survey) []*model.SurveyResponse {
 	// Prepare a slice to hold the transformed SurveyResponse objects
 	var surveyResponses []*model.SurveyResponse
 	for _, survey := range surveys {
 		// Transform the Survey into SurveyResponse
 		surveyResponse := &model.SurveyResponse{
-			ID:          survey.ID,
-			Name:        survey.Name,
-			CreatedDate: survey.CreatedDate,
-			CreatedBy:   survey.User.Name,
+			ID:            survey.ID,
+			Name:          survey.Name,
+			CreatedDate:   survey.CreatedDate,
+			CreatedBy:     survey.CreatedBy.String(),
+			CreatedByName: survey.User.Name,
 		}
 
 		// Transform Questions into QuestionResponse
