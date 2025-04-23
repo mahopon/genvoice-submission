@@ -11,7 +11,7 @@ import Layout from './pages/Layout.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
+  <BrowserRouter basename={"/genvoice-submission/"}>
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Layout />}>
