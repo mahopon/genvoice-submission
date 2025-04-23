@@ -2,10 +2,15 @@ import React, { useState } from 'react';
 import { Button } from 'antd';
 import AddSurveyModal from './AddSurveyModal';
 
-const AddSurveyButton: React.FC = () => {
+interface Props {
+    refresh: () => void;
+}
+
+const AddSurveyButton: React.FC<Props> = ({ refresh }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleClose = () => {
+        refresh();
         setIsModalOpen(false);
     };
 

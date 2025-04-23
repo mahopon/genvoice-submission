@@ -37,7 +37,7 @@ const Home: React.FC = () => {
         (
           <>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <AddSurveyButton />
+              <AddSurveyButton refresh={fetchSurveys} />
             </div>
             <h4>User Created Surveys</h4>
             <SurveyTable surveys={userSurveys} onSurveyComplete={fetchSurveys} onDeleteSurvey={fetchSurveys} />
