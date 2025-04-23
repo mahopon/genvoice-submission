@@ -11,6 +11,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
 
     steps:
       - name: Check out code
@@ -39,8 +43,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./frontend/dist
           keep_files: false
-          permissions:
-            pages: write
 
       # Backend build
       - name: Set up Go
