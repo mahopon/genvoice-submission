@@ -1,11 +1,10 @@
 package service
 
 import (
-	"backend/internal/model/user"
-	db "backend/internal/repository"
+	"backend/internal/model"
+	"backend/internal/repository"
 	"backend/internal/util"
 	"errors"
-	"strings"
 
 	"github.com/google/uuid"
 )
@@ -15,7 +14,7 @@ type UserService interface {
 	RegisterUser(user model.CreateUserRequest) error
 	UpdateUser(id string, user model.UpdateUserRequest) error
 	DeleteUser(id string) error
-	GetUser(id string) *model.GetUserResponse
+	GetUser(id string) (*model.GetUserResponse, error)
 }
 
 type userService struct{}
@@ -25,12 +24,12 @@ func NewUserService() UserService {
 }
 
 func (s *userService) LoginUser(user model.LoginUserRequest) (*model.User, error) {
-	dbUser, err := db.GetUserByUsername(user.Username)
+	dbUser, err := repository.GetUserByUsername(user.Username)
 	if err != nil {
 		return nil, err
 	}
-	salt, hash := util.SplitPasswordSalt(dbUser.Password)
 
+	salt, hash := util.SplitPasswordSalt(dbUser.Password)
 	hashInput, err := util.GenerateFromPasswordWithSalt(user.Password, salt)
 	if err != nil {
 		return nil, err
@@ -48,39 +47,54 @@ func (s *userService) RegisterUser(user model.CreateUserRequest) error {
 	if err != nil {
 		return err
 	}
-	builder := strings.Builder{}
-	builder.WriteString(salt)
-	builder.WriteString(":")
-	builder.WriteString(hash)
+
+	password := salt + ":" + hash
 	newUser := &model.User{
 		Name:     user.Name,
 		Username: user.Username,
-		Password: builder.String(),
-		Role:     "ADMIN",
+		Password: password,
+		Role:     "USER",
 	}
-	err = db.CreateUser(newUser)
+
+	return repository.CreateUser(newUser)
+}
+
+func (s *userService) UpdateUser(id string, update model.UpdateUserRequest) error {
+	userID, err := uuid.Parse(id)
 	if err != nil {
 		return err
 	}
-	return nil
-}
 
-func (s *userService) UpdateUser(id string, updatedUser model.UpdateUserRequest) error {
-	return nil
+	existingUser, err := repository.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	existingUser.Name = update.Name
+	return repository.UpdateUser(existingUser)
 }
 
 func (s *userService) DeleteUser(id string) error {
-	parsedUUID, err := uuid.Parse(id)
+	userID, err := uuid.Parse(id)
 	if err != nil {
 		return err
 	}
-	err = db.DeleteUser(parsedUUID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return repository.DeleteUser(userID)
 }
 
-func (s *userService) GetUser(id string) *model.GetUserResponse {
-	return &model.GetUserResponse{Name: "AHHH"}
+func (s *userService) GetUser(id string) (*model.GetUserResponse, error) {
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := repository.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.GetUserResponse{
+		ID:   user.ID,
+		Name: user.Name,
+	}, nil
 }

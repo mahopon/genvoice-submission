@@ -1,9 +1,10 @@
 package controller
 
 import (
-	model "backend/internal/model/user"
+	"backend/internal/model"
 	"backend/internal/service"
 	"backend/internal/util"
+	"log"
 	"net/http"
 	"time"
 
@@ -22,125 +23,126 @@ func NewUserController(s service.UserService) *UserController {
 
 func (c *UserController) GetUser(ctx echo.Context) error {
 	id := ctx.Param("id")
-	resp := c.UserService.GetUser(id)
-	if resp == nil {
-		return ctx.JSON(http.StatusBadRequest, resp)
+	user, err := c.UserService.GetUser(id)
+	if err != nil || user == nil {
+		return ctx.JSON(http.StatusBadRequest, nil)
 	}
-	return ctx.JSON(http.StatusOK, resp)
+	return ctx.JSON(http.StatusOK, user)
 }
 
 func (c *UserController) LoginUser(ctx echo.Context) error {
+	// Check if a valid JWT is present in the cookies
+	tokenCookie, err := ctx.Request().Cookie("access_token")
+	if err == nil {
+		// Validate the JWT token
+		claims, err := util.ValidateJWT(tokenCookie.Value)
+		if err == nil {
+			// JWT is valid, skip the login and return the user details
+			dbUser, err := c.UserService.GetUser(claims.Subject)
+			if err != nil {
+				return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+			}
+
+			// Return the user data
+			return ctx.JSON(http.StatusOK, echo.Map{
+				"id":   dbUser.ID,
+				"name": dbUser.Name,
+			})
+		}
+	}
+
 	var user model.LoginUserRequest
 	if err := ctx.Bind(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{
-			"error": "Invalid request format",
-		})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
 	dbUser, err := c.UserService.LoginUser(user)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
 	accessToken, _ := util.CreateAccessToken(dbUser.ID, dbUser.Role)
 	refreshToken, _ := util.CreateRefreshToken(dbUser.ID, dbUser.Role)
 
-	// Set refresh token in HttpOnly cookie
-	ctx.SetCookie(&http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		HttpOnly: true,
-		Secure:   true, // Set true in production (HTTPS)
-		Path:     "/",
-		SameSite: http.SameSiteNoneMode,
-		Expires:  time.Now().Add(24 * time.Hour),
-	})
-
-	// Set access token in HttpOnly cookie
-	ctx.SetCookie(&http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		HttpOnly: true,
-		Secure:   true, // Set true in production (HTTPS)
-		Path:     "/",
-		SameSite: http.SameSiteNoneMode,
-		Expires:  time.Now().Add(15 * time.Minute),
-	})
+	c.setTokenCookies(ctx, accessToken, refreshToken)
 
 	return ctx.JSON(http.StatusOK, echo.Map{
-		"id":           dbUser.ID,
-		"name":         dbUser.Name,
-		"access_token": accessToken,
+		"id":   dbUser.ID,
+		"name": dbUser.Name,
 	})
 }
 
 func (c *UserController) Refresh(ctx echo.Context) error {
-	// Get the refresh token from the cookie
 	cookie, err := ctx.Cookie("refresh_token")
+	var tokenToRefresh bool = false // False for access, true for refresh
 	if err != nil {
-		// No refresh token found, user is not authenticated
-		return echo.ErrUnauthorized
+		cookie, err = ctx.Cookie("access_token")
+		if err == nil {
+			tokenToRefresh = true
+		} else {
+			return echo.ErrUnauthorized
+		}
 	}
 
-	// Parse the refresh token
 	token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
 		return []byte(util.SigningKey), nil
 	})
 	if err != nil || !token.Valid {
-		// If token is invalid, log out the user by clearing both tokens
+		log.Printf("Err: %v", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	// Extract claims from the refresh token
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || claims["typ"] != "refresh" {
-		// If it's not a refresh token, log out the user
-		util.ClearTokens(ctx)
-		return echo.ErrUnauthorized
-	}
+	claims, _ := token.Claims.(jwt.MapClaims)
 
-	// Check if the refresh token is expired
 	exp, ok := claims["exp"].(float64)
 	if !ok || float64(time.Now().Unix()) > exp {
-		// If the refresh token is expired, log out the user
+		log.Printf("Err: %v, exp", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	// Extract user info from claims
 	userIDStr, ok := claims["sub"].(string)
 	role, ok2 := claims["role"].(string)
 	if !ok || !ok2 {
-		// If user info is missing, log out the user
+		log.Printf("Err: %v, sub or role", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	// Parse the user ID to UUID
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		// Invalid user ID, log out the user
+		log.Printf("Err: %v, uuid", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	// Create a new access token (short-lived)
-	accessToken, _ := util.CreateAccessToken(userID, role)
+	if tokenToRefresh {
+		accessToken, _ := util.CreateRefreshToken(userID, role)
+		ctx.SetCookie(&http.Cookie{
+			Name:     "refresh_token",
+			Value:    accessToken,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
+			Path:     "/",
+			Expires:  time.Now().Add(24 * time.Hour),
+		})
+	} else {
+		accessToken, _ := util.CreateAccessToken(userID, role)
+		ctx.SetCookie(&http.Cookie{
+			Name:     "access_token",
+			Value:    accessToken,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
+			Path:     "/",
+			Expires:  time.Now().Add(15 * time.Minute),
+		})
+	}
 
-	// Set the new access token cookie (short-lived)
-	ctx.SetCookie(&http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		HttpOnly: true,
-		Secure:   false, // Set true in production (HTTPS)
-		SameSite: http.SameSiteStrictMode,
-		Path:     "/",
-	})
-
-	// Return the new access token in the response
 	return ctx.JSON(http.StatusOK, echo.Map{
-		"access_token": accessToken,
+		"role": role,
 	})
 }
 
@@ -152,41 +154,72 @@ func (c *UserController) Logout(ctx echo.Context) error {
 func (c *UserController) RegisterUser(ctx echo.Context) error {
 	var user model.CreateUserRequest
 	if err := ctx.Bind(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{
-			"error": "Invalid request format",
-		})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
-	err := c.UserService.RegisterUser(user)
-	if err != nil {
+	if err := c.UserService.RegisterUser(user); err != nil {
 		return echo.ErrBadRequest
 	}
 	return ctx.JSON(http.StatusOK, nil)
 }
 
 func (c *UserController) DeleteUser(ctx echo.Context) error {
-	id := ctx.Param("id")
-	err := c.UserService.DeleteUser(id)
-	if err != nil {
+	if err := c.UserService.DeleteUser(ctx.Param("id")); err != nil {
 		return echo.ErrBadRequest
 	}
 	return ctx.JSON(http.StatusOK, nil)
 }
 
 func (c *UserController) UpdateUser(ctx echo.Context) error {
-	id := ctx.Param("id")
 	var user model.UpdateUserRequest
 	if err := ctx.Bind(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{
-			"error": "Invalid request format",
-		})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
-	err := c.UserService.UpdateUser(id, user)
-	if err != nil {
+	if err := c.UserService.UpdateUser(ctx.Param("id"), user); err != nil {
 		return echo.ErrBadRequest
 	}
 	return ctx.JSON(http.StatusOK, nil)
 }
 
 func (c *UserController) CheckAuthStatus(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, nil)
+	tokenCookie, err := ctx.Request().Cookie("access_token")
+	if err == nil {
+		claims, err := util.ValidateJWT(tokenCookie.Value)
+		if err == nil {
+			_, err := ctx.Request().Cookie("refresh_token")
+			if err != nil {
+				return ctx.Redirect(http.StatusFound, "/api/user/refresh")
+			}
+
+			return ctx.JSON(http.StatusOK, echo.Map{"role": claims.Role, "user_id": claims.Subject})
+		}
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid access token"})
+	}
+
+	_, err = ctx.Request().Cookie("refresh_token")
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Not authenticated"})
+	}
+
+	return ctx.Redirect(http.StatusFound, "/api/user/refresh")
+}
+
+func (c *UserController) setTokenCookies(ctx echo.Context, accessToken, refreshToken string) {
+	ctx.SetCookie(&http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Expires:  time.Now().Add(24 * time.Hour),
+	})
+	ctx.SetCookie(&http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		HttpOnly: true,
+		Secure:   true,
+		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Expires:  time.Now().Add(15 * time.Minute),
+	})
 }

@@ -17,16 +17,18 @@ func RegisterUserRoutes(g *echo.Group) {
 	g.POST("/login", userController.LoginUser)
 	// POST /api/user/register
 	g.POST("/register", userController.RegisterUser)
+	// POST /api/user/refresh
+	g.GET("/refresh", userController.Refresh)
+	// GET /api/user/auth
+	g.GET("/auth", userController.CheckAuthStatus)
+	// POST /api/user/logout
+	g.POST("/logout", userController.Logout)
 
 	// Protected routes
 	// GET /api/user/:id
 	g.GET("/:id", userController.GetUser, middleware.JWTMiddleware())
-	// GET /api/user/auth
-	g.GET("/auth", userController.CheckAuthStatus, middleware.JWTMiddleware())
 	// PATCH /api/user/update/:id
 	g.PATCH("/update/:id", userController.UpdateUser, middleware.JWTMiddleware())
-	// POST /api/user/logout
-	g.POST("/logout", userController.Logout, middleware.JWTMiddleware())
 
 	// Admin-Only routes
 	// DELETE /api/user/delete/:id
