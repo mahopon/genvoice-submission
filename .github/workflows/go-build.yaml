@@ -14,15 +14,40 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Frontend build steps
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ./frontend/dist
+          if-no-files-found: error
+
+      # Backend/Go steps
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.24'
+          
       - name: Set up Go environment
         run: |
-          # Set Go environment variables
           echo "Setting up Go environment"
           echo "export PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
           echo "export GOOS=linux" >> $GITHUB_ENV
@@ -34,18 +59,17 @@ jobs:
           go version
           go env
 
-      - name: Install dependencies
+      - name: Install backend dependencies
         run: |
-          cd backend  # Change directory to backend
+          cd backend
           go mod tidy
 
-      - name: Build
+      - name: Build backend
         run: |
-          cd backend  # Change directory to backend
-          go build -o submission ./cmd/main.go  # Build with output filename submission
+          cd backend
+          go build -o submission ./cmd/main.go
 
-      - name: Upload Build Artifact
-        if: success()
+      - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
           name: go-build
