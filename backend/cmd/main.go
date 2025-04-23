@@ -6,6 +6,7 @@ import (
 	repo "backend/internal/repository"
 	"backend/internal/route"
 	"github.com/labstack/echo/v4"
+	emw "github.com/labstack/echo/v4/middleware"
 	"os"
 )
 
@@ -16,5 +17,6 @@ func main() {
 	route.RegisterRoutes(e)
 	// e.Use(middleware.CORS())
 	e.Use(middleware.LogResponseTimeMiddleware)
+	e.Pre(emw.RemoveTrailingSlash())
 	e.Logger.Fatal(e.Start(":8080"))
 }
