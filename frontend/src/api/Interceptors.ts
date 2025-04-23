@@ -3,7 +3,7 @@ import createAuthRefreshInterceptor from 'axios-auth-refresh';
 
 
 const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: 'https://tcyao.com/api',
 });
 
 // Refresh logic to handle token refresh
@@ -11,7 +11,7 @@ const refreshAuthLogic = (failedRequest: { response: { config: AxiosRequestConfi
   if (failedRequest.response && failedRequest.response.config) {
     return axios
       // Refresh token request using cookie
-      .get<{ accessToken: string }>('http://localhost:8080/api/user/refresh', { withCredentials: true })
+      .get<{ accessToken: string }>('https://tcyao.com/api/user/refresh', { withCredentials: true })
       .then((response) => {
         console.log(response);
         return Promise.resolve();

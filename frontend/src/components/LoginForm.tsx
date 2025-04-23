@@ -52,7 +52,7 @@ const LoginForm: React.FC = () => {
           label="Username"
           rules={[{ required: true, message: 'Please input your username!' }]}
         >
-          <Input />
+          <Input placeholder="Enter username" />
         </Form.Item>
 
         <Form.Item
@@ -60,7 +60,7 @@ const LoginForm: React.FC = () => {
           label="Password"
           rules={[{ required: true, message: 'Please input your password!' }]}
         >
-          <Input.Password />
+          <Input.Password placeholder="Enter password" />
         </Form.Item>
 
         <Form.Item>
