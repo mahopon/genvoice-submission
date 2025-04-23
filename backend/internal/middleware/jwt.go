@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"backend/internal/util"
-	"net/http"
-
-	"github.com/golang-jwt/jwt"
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
+	"log"
+	"net/http"
+	"strings"
 )
 
 func JWTMiddleware() echo.MiddlewareFunc {
@@ -20,13 +20,23 @@ func JWTMiddleware() echo.MiddlewareFunc {
 func RoleMiddleware(allowedRoles ...string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			user := c.Get("user").(*jwt.Token)
-			claims := user.Claims.(jwt.MapClaims)
-			role := claims["role"].(string)
+			token, err := c.Cookie("access_token")
+			if err != nil {
+				log.Println("No token?!1")
+				return echo.ErrUnauthorized
+			}
+
+			parsedToken, err := util.ValidateJWT(token.Value)
+			if err != nil {
+				log.Printf("Invalid token?!2 %v,", err)
+				return echo.ErrUnauthorized
+			}
+
+			role := parsedToken.Role
 
 			// Check if the role is in the allowed roles list
 			for _, r := range allowedRoles {
-				if role == r {
+				if strings.EqualFold(role, r) {
 					return next(c) // Continue to the handler
 				}
 			}

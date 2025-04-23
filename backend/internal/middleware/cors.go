@@ -21,6 +21,7 @@ func CORS() echo.MiddlewareFunc {
 			echo.PUT,
 			echo.DELETE,
 			echo.OPTIONS,
+			echo.PATCH,
 		},
 	})
 }
