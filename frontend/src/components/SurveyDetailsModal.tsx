@@ -15,6 +15,7 @@ interface SurveyDetailsModalProps {
 
 const SurveyDetailsModal: React.FC<SurveyDetailsModalProps> = ({ selectedSurvey, setSelectedSurvey, message, onSurveyComplete }) => {
     const [recordings, setRecordings] = useState<Record<string, Blob | undefined>>({});
+    const [recordingQuestionId, setRecordingQuestionId] = useState<string | null>(null);  // Track the recording question
 
     useEffect(() => {
         if (!selectedSurvey?.questions?.length) return;
@@ -37,26 +38,34 @@ const SurveyDetailsModal: React.FC<SurveyDetailsModalProps> = ({ selectedSurvey,
     };
 
     const handleModalOk = async () => {
-        const mapRecordings: CreateAnswerRequest[] = await Promise.all(
-            Object.entries(recordings).map(async ([questionId, blob]) => {
-                const question = selectedSurvey?.questions?.find(q => q.id.toString() === questionId);
+        let mapRecordings: CreateAnswerRequest[] = [];
 
-                const base64Answer = blob ? await blobToBase64(blob) : "";
+        if (Object.keys(recordings).length > 0) {
+            mapRecordings = await Promise.all(
+                Object.entries(recordings).map(async ([questionId, blob]) => {
+                    const question = selectedSurvey?.questions?.find(q => q.id.toString() === questionId);
+                    const base64Answer = blob ? await blobToBase64(blob) : "";
 
-                return {
-                    survey_id: selectedSurvey!.id,
-                    question_id: Number(question!.id),
-                    user_id: "",
-                    answer: base64Answer,
-                };
-            })
-        );
+                    return {
+                        survey_id: selectedSurvey!.id,
+                        question_id: Number(question!.id),
+                        user_id: "",
+                        answer: base64Answer,
+                    };
+                })
+            );
+        }
 
-        message.success("Submitted answers");
-        submitAnswer(mapRecordings).then(() => {
-            onSurveyComplete();
+        if (mapRecordings && mapRecordings.length > 0) {
+            message.success("Submitted answers");
+            submitAnswer(mapRecordings).then(() => {
+                onSurveyComplete();
+                setSelectedSurvey(undefined);
+            });
+        } else {
+            message.warning("No answers to submit");
             setSelectedSurvey(undefined);
-        });
+        }
     };
 
     const handleDeleteClick = (questionId: string) => {
@@ -88,9 +97,15 @@ const SurveyDetailsModal: React.FC<SurveyDetailsModalProps> = ({ selectedSurvey,
                                                     <VoiceRecorder
                                                         questionId={question.id}
                                                         existingAudio={recordings[question.id]}
+                                                        isRecording={recordingQuestionId === question.id}
+                                                        isDisabled={recordingQuestionId !== null && recordingQuestionId !== question.id}
                                                         onDelete={handleDeleteClick}
                                                         onRecordingComplete={(blob: Blob) => {
                                                             setRecordings((prev) => ({ ...prev, [question.id]: blob }));
+                                                            setRecordingQuestionId(null);
+                                                        }}
+                                                        onStartRecording={() => {
+                                                            setRecordingQuestionId(question.id);
                                                         }}
                                                     />
                                                 </div>
@@ -102,9 +117,15 @@ const SurveyDetailsModal: React.FC<SurveyDetailsModalProps> = ({ selectedSurvey,
                                             <div style={{ marginTop: '0.5rem' }}>
                                                 <VoiceRecorder
                                                     questionId={question.id}
+                                                    isRecording={recordingQuestionId === question.id}
+                                                    isDisabled={recordingQuestionId !== null && recordingQuestionId !== question.id}
                                                     onDelete={handleDeleteClick}
                                                     onRecordingComplete={(blob: Blob) => {
                                                         setRecordings((prev) => ({ ...prev, [question.id]: blob }));
+                                                        setRecordingQuestionId(null);
+                                                    }}
+                                                    onStartRecording={() => {
+                                                        setRecordingQuestionId(question.id);
                                                     }}
                                                 />
                                             </div>

@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
 import { Table, message } from 'antd';
 import { SurveyResponse } from '../types/Survey';
-import { useAuth } from '../context/AuthContext';
 import SurveyDetailsModal from './SurveyDetailsModal';
+import SurveyOwnerModal from './SurveyOwnerModal'; // Create this new component
+import { useAuth } from '../context/AuthContext';
 
 interface TableProps {
-    surveys: SurveyResponse[]
+    surveys: SurveyResponse[];
     onSurveyComplete: () => void;
+    onDeleteSurvey: (surveyId: string) => void; // New prop for handling delete
 }
 
-const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete }) => {
+const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete, onDeleteSurvey }) => {
     const [messageApi, contextHolder] = message.useMessage();
-    const { isAuthenticated } = useAuth();
-    const [selectedSurvey, setSelectedSurvey] = useState<SurveyResponse | null>(null);
+    const [selectedSurvey, setSelectedSurvey] = useState<SurveyResponse | undefined>(undefined);
+    const { userId } = useAuth();
+
+    const handleSurveyClick = (record: SurveyResponse) => {
+        setSelectedSurvey(record);
+        console.log(record);
+    };
 
     const columns = [
         {
@@ -20,14 +27,11 @@ const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete }) => {
             dataIndex: 'name',
             key: 'name',
             render: (text: string, record: SurveyResponse) => (
-                <a onClick={() => {
-                    if (!isAuthenticated)
-                        messageApi.info("Please login to view and answer questions")
-                    else
-                        setSelectedSurvey(record);
-                }} style={{ cursor: 'pointer' }}>
-                    {text}
-                </a>
+                <>
+                    <a onClick={() => handleSurveyClick(record)} style={{ cursor: 'pointer' }}>
+                        {text}
+                    </a>
+                </>
             )
         },
         {
@@ -38,8 +42,8 @@ const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete }) => {
         },
         {
             title: 'Created By',
-            dataIndex: 'created_by',
-            key: 'created_by',
+            dataIndex: 'created_by_name',
+            key: 'created_by_name',
         },
     ];
 
@@ -52,9 +56,23 @@ const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete }) => {
                 rowKey="id"
                 pagination={false}
             />
-            {selectedSurvey && (
-                <SurveyDetailsModal selectedSurvey={selectedSurvey} setSelectedSurvey={setSelectedSurvey} onSurveyComplete={onSurveyComplete} message={messageApi} />
+
+            {selectedSurvey && selectedSurvey.created_by === userId && (
+                <SurveyOwnerModal
+                    survey={selectedSurvey}
+                    onClose={() => setSelectedSurvey(undefined)}
+                    onDeleteSurvey={onDeleteSurvey} // Pass the delete function
+                />
             )}
+            {selectedSurvey && selectedSurvey.created_by !== userId && (
+                <SurveyDetailsModal
+                    selectedSurvey={selectedSurvey}
+                    setSelectedSurvey={setSelectedSurvey}
+                    onSurveyComplete={onSurveyComplete}
+                    message={messageApi}
+                />
+            )}
+
         </>
     );
 };

@@ -4,17 +4,22 @@ import React, { useState, useRef, useEffect } from 'react';
 interface VoiceRecorderProps {
   questionId: string;
   existingAudio?: Blob;
+  isRecording: boolean;  // Check if this recorder is the one currently recording
+  isDisabled: boolean;    // Disable all other recorders except the active one
   onRecordingComplete?: (audioBlob: Blob) => void;
   onDelete?: (questionId: string) => void;
+  onStartRecording?: () => void;  // Callback to start recording for this question
 }
 
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   questionId,
   existingAudio,
+  isRecording,
+  isDisabled,
   onRecordingComplete,
-  onDelete
+  onDelete,
+  onStartRecording
 }) => {
-  const [recording, setRecording] = useState<boolean>(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -27,7 +32,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   }, [existingAudio]);
 
   const handleRecordClick = async () => {
-    if (!recording) {
+    if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mediaRecorder = new MediaRecorder(stream);
@@ -47,7 +52,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         };
 
         mediaRecorder.start();
-        setRecording(true);
+        onStartRecording?.(); // Notify parent that recording started
         message.success('Recording started');
       } catch (err) {
         console.log(err);
@@ -55,7 +60,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       }
     } else {
       mediaRecorderRef.current?.stop();
-      setRecording(false);
+      message.success('Recording stopped');
     }
   };
 
@@ -67,11 +72,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   return (
     <>
       <Button
-        type={recording ? 'default' : 'primary'}
-        danger={recording}
+        type={isRecording ? 'default' : 'primary'}
+        danger={isRecording}
         onClick={handleRecordClick}
+        disabled={isDisabled}  // Disable this recorder if it's not the one recording
       >
-        {recording ? "Recording..." : "Record"}
+        {isRecording ? "Recording..." : "Record"}
       </Button>
       {(audioUrl) && (
         <div style={{ marginTop: '2rem' }}>

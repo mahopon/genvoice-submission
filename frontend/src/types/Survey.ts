@@ -1,26 +1,9 @@
-export type Survey = {
-    id: string;
-    name: string;
-    created_date: Date;
-    question: Question[];
-}
-
-type Question = {
-    question: string;
-    created_date: Date;
-}
-
-export type Answer = {
-    id: number;
-    userid: string;
-    surveyid: string;
-    questionid: string;
-    Answer: Blob;
-}
-
 export type CreateSurveyRequest = {
-    user_id: string;
     name: string;
+};
+
+export type CreateSurveyResponse = {
+    survey_id: string;
 };
 
 export type CreateQuestionRequest = {
@@ -56,5 +39,11 @@ export type SurveyResponse = {
     name: string;
     created_date: string;
     created_by: string;
+    created_by_name: string;
     questions: QuestionResponse[];
+}
+
+export type CollatedSurveyResponse = {
+    user_made: SurveyResponse[];
+    others_made: SurveyResponse[];
 }
