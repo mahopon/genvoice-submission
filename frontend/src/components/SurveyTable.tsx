@@ -6,23 +6,13 @@ import SurveyDetailsModal from './SurveyDetailsModal';
 
 interface TableProps {
     surveys: SurveyResponse[]
+    onSurveyComplete: () => void;
 }
 
-const SurveyTable: React.FC<TableProps> = ({ surveys }) => {
+const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete }) => {
     const [messageApi, contextHolder] = message.useMessage();
     const { isAuthenticated } = useAuth();
     const [selectedSurvey, setSelectedSurvey] = useState<SurveyResponse | null>(null);
-
-    const handleModalClose = () => {
-        console.log("Close")
-        // Do nothing
-        setSelectedSurvey(null);
-    }
-    const handleModalOk = () => {
-        console.log("OK")
-        // TODO: Add POST to save answer
-        setSelectedSurvey(null);
-    }
 
     const columns = [
         {
@@ -63,7 +53,7 @@ const SurveyTable: React.FC<TableProps> = ({ surveys }) => {
                 pagination={false}
             />
             {selectedSurvey && (
-                <SurveyDetailsModal selectedSurvey={selectedSurvey} onOk={handleModalOk} onClose={handleModalClose} />
+                <SurveyDetailsModal selectedSurvey={selectedSurvey} setSelectedSurvey={setSelectedSurvey} onSurveyComplete={onSurveyComplete} message={messageApi} />
             )}
         </>
     );

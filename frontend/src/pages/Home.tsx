@@ -20,7 +20,7 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <SurveyTable surveys={surveys} />
+    <SurveyTable surveys={surveys} onSurveyComplete={fetchSurveys} />
   );
 }
 

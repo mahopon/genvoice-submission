@@ -1,30 +1,30 @@
-import { Button, message } from 'antd'
-import React, { useState, useRef, useEffect } from 'react'
-import { base64ToBlob } from '../utils/encoding';
+import { Button, message } from 'antd';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface VoiceRecorderProps {
-  audioFile?: string; // Optional prop for an audio file as a Base64-encoded string
+  questionId: string;
+  existingAudio?: Blob;
+  onRecordingComplete?: (audioBlob: Blob) => void;
+  onDelete?: (questionId: string) => void;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ audioFile }) => {
-  const [recording, setRecording] = useState<boolean>(false)
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
+  questionId,
+  existingAudio,
+  onRecordingComplete,
+  onDelete
+}) => {
+  const [recording, setRecording] = useState<boolean>(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // If audioFile prop is passed, decode and display the audio file
   useEffect(() => {
-    if (audioFile) {
-      try {
-        const decodedBlob = base64ToBlob(audioFile, 'audio/webm');
-        const audioUrl = URL.createObjectURL(decodedBlob);
-        setAudioUrl(audioUrl);
-      } catch (error) {
-        console.error("Error decoding audioFile:", error);
-        message.error("Failed to decode audio file");
-      }
+    if (existingAudio) {
+      const audioUrl = URL.createObjectURL(existingAudio);
+      setAudioUrl(audioUrl);
     }
-  }, [audioFile]);
+  }, [existingAudio]);
 
   const handleRecordClick = async () => {
     if (!recording) {
@@ -40,6 +40,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ audioFile }) => {
 
         mediaRecorder.onstop = () => {
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          onRecordingComplete?.(audioBlob);
           const audioUrl = URL.createObjectURL(audioBlob);
           setAudioUrl(audioUrl);
           message.success('Recording complete');
@@ -60,6 +61,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ audioFile }) => {
 
   const handleDeleteClick = () => {
     setAudioUrl(null);
+    onDelete!(questionId);
   };
 
   return (
@@ -71,9 +73,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ audioFile }) => {
       >
         {recording ? "Recording..." : "Record"}
       </Button>
-      {(audioUrl || audioFile) && (
+      {(audioUrl) && (
         <div style={{ marginTop: '2rem' }}>
-          <audio controls src={audioUrl || (audioFile ? URL.createObjectURL(base64ToBlob(audioFile, 'audio/webm')) : '')} />
+          <audio controls src={audioUrl} />
           <br />
           <a
             onClick={handleDeleteClick}
@@ -85,6 +87,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ audioFile }) => {
       )}
     </>
   );
-}
+};
 
 export default VoiceRecorder;

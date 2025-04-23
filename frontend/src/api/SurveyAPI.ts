@@ -11,13 +11,14 @@ const createQuestion = async (req: CreateQuestionRequest) => {
     return res.data;
 };
 
-const submitAnswer = async (req: CreateAnswerRequest) => {
-    const res = await api.post("/survey/answer", req);
+const submitAnswer = async (req: CreateAnswerRequest[]) => {
+    console.log(req);
+    const res = await api.post("/survey/answer", req, { withCredentials: true });
     return res.data;
 };
 
 const getSurveys = async (): Promise<SurveyResponse[]> => {
-    const res = await api.get("/survey");
+    const res = await api.get("/survey", { withCredentials: true });
     return res.data;
 }
 
