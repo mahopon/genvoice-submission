@@ -1,4 +1,4 @@
-name: Go Build and Test
+name: Build and Deploy
 
 on:
   push:
@@ -14,33 +14,33 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
+      # Frontend setup and build
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '18'
           cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
-      # Frontend build steps
       - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm install
+        working-directory: ./frontend
+        run: npm install
 
       - name: Build frontend
-        run: |
-          cd frontend
-          npm run build
+        working-directory: ./frontend
+        run: npm run build
 
-      - name: Upload frontend build
-        uses: actions/upload-artifact@v4
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          name: frontend-build
-          path: ./frontend/dist
-          if-no-files-found: error
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          keep_files: false
 
-      # Backend/Go steps
+      # Backend build
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -48,25 +48,15 @@ jobs:
           
       - name: Set up Go environment
         run: |
-          echo "Setting up Go environment"
           echo "export PATH=$PATH:/usr/local/go/bin" >> $GITHUB_ENV
           echo "export GOOS=linux" >> $GITHUB_ENV
           echo "export GOARCH=amd64" >> $GITHUB_ENV
           echo "export CGO_ENABLED=0" >> $GITHUB_ENV
 
-      - name: Verify Go installation
-        run: |
-          go version
-          go env
-
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          go mod tidy
-
       - name: Build backend
+        working-directory: ./backend
         run: |
-          cd backend
+          go mod tidy
           go build -o submission ./cmd/main.go
 
       - name: Upload backend artifact
