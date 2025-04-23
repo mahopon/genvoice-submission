@@ -14,7 +14,6 @@ type SurveyService interface {
 	CreateSurvey(newSurvey model.CreateSurveyRequest) (uuid.UUID, error)
 	CreateQuestion(newQuestion []model.CreateQuestionRequest) error
 	CreateAnswer(userId uuid.UUID, newAnswer model.CreateAnswerRequest) error
-	GetAllSurveys() ([]*model.SurveyResponse, error)
 	GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, []*model.SurveyResponse, error)
 	GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error)
 	DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error
@@ -74,18 +73,6 @@ func (s *surveyService) CreateAnswer(userId uuid.UUID, newAnswer model.CreateAns
 		return fmt.Errorf("failed to submit answer")
 	}
 	return nil
-}
-
-func (s *surveyService) GetAllSurveys() ([]*model.SurveyResponse, error) {
-	surveys, err := repo.GetAllSurveys()
-	if err != nil {
-		log.Println("GetAllSurveys error:", err)
-		return nil, fmt.Errorf("could not retrieve surveys")
-	}
-
-	surveyResponses := transformDBtoOutput(surveys)
-
-	return surveyResponses, nil
 }
 
 func (s *surveyService) GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyResponse, []*model.SurveyResponse, error) {

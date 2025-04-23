@@ -28,18 +28,6 @@ func CreateAnswer(answer *model.Answer) error {
 	}).Create(answer).Error
 }
 
-// GetAllSurveys() retrieves all available surveys
-func GetAllSurveys() ([]*model.Survey, error) {
-	var surveys []*model.Survey
-
-	// Preload related data (questions and answers) in one query
-	if err := db.Preload("User").Preload("Questions").Find(&surveys).Error; err != nil {
-		return nil, err
-	}
-
-	return surveys, nil
-}
-
 // DeleteSurveyByID deletes a survey by its ID
 func DeleteSurveyByID(surveyID uuid.UUID) error {
 	// Delete the survey and its related data (if any)
@@ -120,15 +108,6 @@ func GetSurvey(surveyId uuid.UUID) ([]*model.Survey, error) {
 func GetAnswersBySurveyIDAndQuestionID(surveyID uuid.UUID, questionID int) ([]model.Answer, error) {
 	var answers []model.Answer
 	if err := db.Where("survey_id = ? AND question_id = ?", surveyID, questionID).Find(&answers).Error; err != nil {
-		return nil, err
-	}
-	return answers, nil
-}
-
-// GetAnswersBySurveyIDAndQuestionID retrieves all answers for a specific survey and question for a specific user.
-func GetAnswersBySurveyIDAndQuestionIDAndUserID(surveyID uuid.UUID, questionID int, userID uuid.UUID) ([]model.Answer, error) {
-	var answers []model.Answer
-	if err := db.Where("survey_id = ? AND question_id = ? AND user_id = ?", surveyID, questionID, userID).Find(&answers).Error; err != nil {
 		return nil, err
 	}
 	return answers, nil

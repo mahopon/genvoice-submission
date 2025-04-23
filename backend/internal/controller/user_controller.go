@@ -4,13 +4,11 @@ import (
 	"backend/internal/model"
 	"backend/internal/service"
 	"backend/internal/util"
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 )
 
 type UserController struct {
@@ -85,33 +83,14 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 		}
 	}
 
-	token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
-		return []byte(util.SigningKey), nil
-	})
-	if err != nil || !token.Valid {
-		log.Printf("Err: %v", err)
+	token, err := util.ValidateJWT(cookie.Value)
+	if err != nil {
+		log.Printf("Err: %v, uuid", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	claims, _ := token.Claims.(jwt.MapClaims)
-
-	exp, ok := claims["exp"].(float64)
-	if !ok || float64(time.Now().Unix()) > exp {
-		log.Printf("Err: %v, exp", err)
-		util.ClearTokens(ctx)
-		return echo.ErrUnauthorized
-	}
-
-	userIDStr, ok := claims["sub"].(string)
-	role, ok2 := claims["role"].(string)
-	if !ok || !ok2 {
-		log.Printf("Err: %v, sub or role", err)
-		util.ClearTokens(ctx)
-		return echo.ErrUnauthorized
-	}
-
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(token.Subject)
 	if err != nil {
 		log.Printf("Err: %v, uuid", err)
 		util.ClearTokens(ctx)
@@ -119,7 +98,7 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 	}
 
 	if tokenToRefresh {
-		accessToken, _ := util.CreateRefreshToken(userID, role)
+		accessToken, _ := util.CreateRefreshToken(userID, token.Role)
 		ctx.SetCookie(&http.Cookie{
 			Name:     "refresh_token",
 			Value:    accessToken,
@@ -130,7 +109,7 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 			Expires:  time.Now().Add(24 * time.Hour),
 		})
 	} else {
-		accessToken, _ := util.CreateAccessToken(userID, role)
+		accessToken, _ := util.CreateAccessToken(userID, token.Role)
 		ctx.SetCookie(&http.Cookie{
 			Name:     "access_token",
 			Value:    accessToken,
@@ -143,7 +122,7 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, echo.Map{
-		"role": role,
+		"role": token.Role,
 	})
 }
 

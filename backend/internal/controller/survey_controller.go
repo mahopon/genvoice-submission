@@ -138,14 +138,6 @@ func (c *SurveyController) CreateAnswer(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, echo.Map{"message": "Answers sent successfully"})
 }
 
-func (c *SurveyController) GetAllSurveys(ctx echo.Context) error {
-	surveys, err := c.SurveyService.GetAllSurveys()
-	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
-	}
-	return ctx.JSON(http.StatusOK, surveys)
-}
-
 func (c *SurveyController) GetSurveysDone(ctx echo.Context) error {
 
 	tokenString, err := ctx.Cookie("access_token")
