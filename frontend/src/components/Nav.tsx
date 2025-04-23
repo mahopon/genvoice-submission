@@ -1,4 +1,4 @@
-import { Button } from 'antd';
+import { Button, message } from 'antd';
 import { Header } from 'antd/es/layout/layout';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
@@ -7,16 +7,18 @@ import { useAuth } from '../context/AuthContext';
 
 const Nav: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();  // Get current route
-  const { isAuthenticated, setAuthStatus, role } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, setAuthStatus, role, setRole, setUserId } = useAuth();
   const [currentPageName, setCurrentPageName] = useState<string>('Home');
+  const [messageApi, contextHolder] = message.useMessage();
 
   useEffect(() => {
     const routeToName: Record<string, string> = {
       '/': 'Home',
       '/login': 'Login',
       '/register': 'Register',
-      '/settings': 'Settings'
+      '/settings': 'Settings',
+      '/admin': 'Admin'
     };
     setCurrentPageName(routeToName[location.pathname]);
   }, [location.pathname]);
@@ -34,8 +36,10 @@ const Nav: React.FC = () => {
   const handleLogout = async () => {
     console.log('Logout user');
     if (await logoutUser()) {
-      console.log("Logged out");
+      messageApi.success("Logged out");
       setAuthStatus(false);
+      setRole(null)
+      setUserId(null)
       navigate("/");
     }
   };
@@ -44,16 +48,22 @@ const Nav: React.FC = () => {
     navigate("/settings");
   };
 
+  const navAdmin = () => {
+    console.log('Navigate to Admin');
+    navigate("/admin");
+  };
+
   const navHome = () => {
     console.log('Navigate to Home');
     navigate("/");
   };
 
-  // Utility function to disable button if already on that page
   const isActivePage = (path: string) => location.pathname === path;
 
   return (
-    <Header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', backgroundColor: "white" }}>
+    < Header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', backgroundColor: "white" }
+    }>
+      {contextHolder}
       <div style={{ fontSize: '20px' }}>
         {currentPageName}
       </div>
@@ -68,7 +78,7 @@ const Nav: React.FC = () => {
         {isAuthenticated && (
           <>
             {role == "ADMIN" && (
-              <Button type="primary" onClick={navSettings} disabled={isActivePage('/admin')}>Settings</Button>
+              <Button type="primary" onClick={navAdmin} disabled={isActivePage('/admin')}>Admin</Button>
             )
             }
             <Button type="primary" onClick={navSettings} disabled={isActivePage('/settings')}>Settings</Button>
@@ -76,7 +86,7 @@ const Nav: React.FC = () => {
           </>
         )}
       </div>
-    </Header>
+    </Header >
   );
 };
 

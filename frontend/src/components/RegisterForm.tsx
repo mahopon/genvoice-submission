@@ -1,7 +1,8 @@
 import React from "react";
-import { Form, Input, Button, Card } from "antd";
-import { registerUser } from "../api/UserAPI";
-import { RegisterUserRequest, } from "../types/User";
+import { Form, Input, Button, Card, message } from "antd";
+import { loginUser, registerUser } from "../api/UserAPI";
+import { RegisterUserRequest, UserLoginRequest, UserLoginResponse, } from "../types/User";
+import { useAuth } from "../context/AuthContext";
 
 interface Props {
     setRegistered: (value: boolean) => void;
@@ -10,7 +11,9 @@ interface Props {
 
 const RegistrationForm: React.FC<Props> = ({ setRegistered }) => {
     const [form] = Form.useForm();
+    const [messageApi, contextHolder] = message.useMessage();
 
+    const { setAuthStatus, setRole, setUserId } = useAuth();
     const onFinish = (values: RegisterUserRequest) => {
         console.log("Form Submitted:", values);
         const name = values.name;
@@ -26,14 +29,28 @@ const RegistrationForm: React.FC<Props> = ({ setRegistered }) => {
             username: username as string,
             password: password as string,
         };
-        registerUser(newUser);
-        setRegistered(true);
+        registerUser(newUser).then(() => {
+            const login: UserLoginRequest = {
+                username: newUser.username,
+                password: newUser.password
+            }
+            loginUser(login).then((res: UserLoginResponse | false) => {
+                setAuthStatus(true);
+                setRole((res as UserLoginResponse).role);
+                setUserId((res as UserLoginResponse).id);
+                messageApi.success("Registered and logged in");
+            })
+            setRegistered(true);
+        }).catch((err) => {
+            messageApi.error(`Unable to register. ${err.response.data.error}`);
+        });
     };
 
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <Card title="Register" className="rounded-2xl shadow-lg" style={{ maxWidth: 300, width: "100%" }}>
+            {contextHolder}
+            <Card className="rounded-2xl shadow-lg" style={{ maxWidth: "300px", width: "100%", margin: "0 auto" }}>
                 <Form
                     form={form}
                     layout="vertical"
@@ -64,8 +81,8 @@ const RegistrationForm: React.FC<Props> = ({ setRegistered }) => {
                         <Input.Password placeholder="Enter a password" />
                     </Form.Item>
 
-                    <Form.Item>
-                        <Button type="primary" htmlType="submit">
+                    <Form.Item style={{ textAlign: "center" }}>
+                        <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                             Register
                         </Button>
                     </Form.Item>

@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const authenticateUser = async () => {
             const authData = await checkAuth();
             setAuthStatus(authData.isAuthenticated);
-            setRole(authData.role);
+            setRole(authData.role.toUpperCase());
             setUserId(authData.userId);
         };
         authenticateUser();

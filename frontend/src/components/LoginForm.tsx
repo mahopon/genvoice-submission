@@ -11,7 +11,7 @@ interface FormValues {
 }
 
 const LoginForm: React.FC = () => {
-  const { setAuthStatus } = useAuth();
+  const { setAuthStatus, setRole, setUserId } = useAuth();
   const [messageApi, contextHolder] = message.useMessage();
   const [submitted, setSubmitted] = useState<boolean>(false);
   const navigate = useNavigate();
@@ -22,10 +22,14 @@ const LoginForm: React.FC = () => {
       username: values.username,
       password: values.password
     };
-    if (await loginUser(details)) {
+
+    const loginResult = await loginUser(details);
+    if (loginResult) {
       messageApi.success('Successfully logged in!');
       setTimeout(() => {
         setAuthStatus(true);
+        setRole(loginResult.role.toUpperCase());
+        setUserId(loginResult.id);
         navigate("/");
       }, 1000);
     } else {
@@ -35,7 +39,7 @@ const LoginForm: React.FC = () => {
   };
 
   return (
-    <div style={{ width: '300px', margin: '0 auto' }}>
+    <div style={{ width: '300px', margin: '0 auto', alignItems: "center" }}>
       {contextHolder}
       <Form
         name="login_form"
