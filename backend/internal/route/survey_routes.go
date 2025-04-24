@@ -3,13 +3,13 @@ package route
 import (
 	"backend/internal/controller"
 	"backend/internal/middleware"
-	"backend/internal/service"
+	"backend/internal/service/impl/real"
 
 	"github.com/labstack/echo/v4"
 )
 
 func RegisterSurveyRoutes(g *echo.Group) {
-	surveyService := service.NewSurveyService()
+	surveyService := real.NewSurveyService()
 	surveyController := controller.NewSurveyController(surveyService)
 
 	// POST /api/survey

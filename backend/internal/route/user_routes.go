@@ -3,13 +3,13 @@ package route
 import (
 	"backend/internal/controller"
 	"backend/internal/middleware"
-	"backend/internal/service"
+	"backend/internal/service/impl/real"
 
 	"github.com/labstack/echo/v4"
 )
 
 func RegisterUserRoutes(g *echo.Group) {
-	userService := service.NewUserService()
+	userService := real.NewUserService()
 	userController := controller.NewUserController(userService)
 
 	// Public routes
