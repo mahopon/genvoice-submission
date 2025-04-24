@@ -19,7 +19,6 @@ const UserTable: React.FC = () => {
         setData(() => {
             return users;
         });
-        console.log(users);
     };
     useEffect(() => {
         fetchData();

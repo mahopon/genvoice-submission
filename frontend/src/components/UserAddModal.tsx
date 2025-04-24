@@ -36,7 +36,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ visible, onCancel, onSubmit
     return (
         <Modal
             title="Add New User"
-            open={visible}  // Changed from 'true' to 'visible'
+            open={visible}
             onOk={handleOk}
             onCancel={() => {
                 onCancel();

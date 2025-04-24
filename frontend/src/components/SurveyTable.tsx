@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 interface TableProps {
     surveys: SurveyResponse[];
     onSurveyComplete: () => void;
-    onDeleteSurvey: (surveyId: string) => void; // New prop for handling delete
+    onDeleteSurvey: (surveyId: string) => void;
 }
 
 const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete, onDeleteSurvey }) => {
@@ -61,7 +61,7 @@ const SurveyTable: React.FC<TableProps> = ({ surveys, onSurveyComplete, onDelete
                 <SurveyOwnerModal
                     survey={selectedSurvey}
                     onClose={() => setSelectedSurvey(undefined)}
-                    onDeleteSurvey={onDeleteSurvey} // Pass the delete function
+                    onDeleteSurvey={onDeleteSurvey}
                 />
             )}
             {selectedSurvey && selectedSurvey.created_by !== userId && (
