@@ -35,6 +35,8 @@ Admin will be able to
 
 of other users.
 
+Be aware that deleting has no confirmation modal, and that deleting users will trigger cascade deletion of surveys and answers that they have made.
+
 ## Backend
 > Golang with Echo
 
