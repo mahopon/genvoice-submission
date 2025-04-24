@@ -31,6 +31,7 @@ type Question struct {
 type Answer struct {
 	ID     int       `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index:idx_user_question_survey,unique"`
+	User   User      `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 
 	SurveyID uuid.UUID `json:"survey_id" gorm:"type:uuid;not null;index:idx_user_question_survey,unique"`
 	Survey   Survey    `json:"survey" gorm:"foreignKey:SurveyID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
