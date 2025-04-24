@@ -1,6 +1,6 @@
 # genvoice-submission
 
-## Frontend
+## Frontend - Hosted on Github Pages
 > React-router with Antd and Axios
 
 ### Home
@@ -37,7 +37,7 @@ Admins also can create new users within the admin page.
 
 Be aware that deleting has no confirmation popup, and that deleting users will trigger cascade deletion of surveys and answers that they have made.
 
-## Backend
+## Backend - Hosted on my DigitalOcean droplet
 > Golang with Echo
 
 ### Authentication & Authorization
@@ -46,7 +46,7 @@ Done by JSON Web Tokens (JWT) over HTTPOnly Cookies (as best as I can, I wanted 
 ### Password hashing
 Using ARGON2 hashing algorithm to secure passwords.
 
-## Database
+## Database - Hosted on my DigitalOcean droplet
 Using PostgreSQL, accessing with GORM.
 
 ## Additional Notes
