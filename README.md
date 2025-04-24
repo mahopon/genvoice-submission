@@ -27,15 +27,15 @@ No password policy is imposed here.
 ### Admin
 Admin will redirect the user if 1. they have not been authenticated before and/or 2. they do not have admin role
 
-Admin will be able to
+Admin will be able to perform on other users:
 1. Change username - Must always have value
 2. Change name - Must always have value
 3. Change password - Need not be filled, just won't be update
 4. Change role - Select of either USER or ADMIN
 
-of other users.
+Admins also can create new users within the admin page.
 
-Be aware that deleting has no confirmation modal, and that deleting users will trigger cascade deletion of surveys and answers that they have made.
+Be aware that deleting has no confirmation popup, and that deleting users will trigger cascade deletion of surveys and answers that they have made.
 
 ## Backend
 > Golang with Echo
@@ -48,3 +48,8 @@ Using ARGON2 hashing algorithm to secure passwords.
 
 ## Database
 Using PostgreSQL, accessing with GORM.
+
+## Additional Notes
+I am aware that the return status codes/messages are not being used properly. Due to a lack of time (incoming exams), I'm not able to find time to refactor the backend for proper use. Some of the API calls on the frontend are also not done well as a result of this.
+
+I used a lot of GPT for the frontend as I'm not familiar with React (but learning) and don't think I could've done as much as I have without doing so.
