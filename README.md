@@ -4,7 +4,7 @@
 > React-router with Antd and Axios
 
 ### Home
-Shows writeup and links when not logged in. Shows two tables when logged in, one for surveys that user has created and another one for surveys that others have done. Users will be able to 
+Shows writeup and links when not logged in. Shows two tables when logged in, one for surveys that user has created and another one for surveys that others have done. Users will be able to create surveys, which start from 1 question and can have more added.
 
 1. For surveys that users have created, they are not able to enter their input, however they can see all answers by other users (I didn't have time to add in the identifier for the answers). They can also choose to delete the survey, which will delete all related questions and answers in the DB.
 2. For surveys that others have created, users can record their voice input. After saving, they can go back to the survey to delete or re-record, which will override the audio.
