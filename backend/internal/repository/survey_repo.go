@@ -88,6 +88,12 @@ func GetAllSurveysDoneByUserSorted(userId uuid.UUID) (createdByUser []*model.Sur
 		}
 	}
 
+	for _, survey := range unanswered {
+		for i := range survey.Questions {
+			survey.Questions[i].Answers = nil
+		}
+	}
+
 	otherSurveys = append(answered, unanswered...)
 
 	return createdByUser, otherSurveys, nil
