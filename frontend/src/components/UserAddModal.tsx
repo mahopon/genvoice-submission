@@ -28,7 +28,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ visible, onCancel, onSubmit
                 onSubmit();
                 form.resetFields();
             } else {
-                messageApi.error("Choose another username!");
+                messageApi.error("Username taken. Choose another username!");
             }
         });
     };
