@@ -12,7 +12,6 @@ func LogResponseTimeMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		err := next(c)
 		duration := time.Since(start)
 		log.Printf("Request %s %s took %v", c.Request().Method, c.Request().URL.Path, duration)
-
 		return err
 	}
 }
