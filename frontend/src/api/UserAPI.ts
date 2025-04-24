@@ -76,8 +76,13 @@ const editWholeUser = async (userId: string, details: UserUpdateRequest): Promis
 }
 
 const createUser = async (user: UserCreateRequest): Promise<boolean> => {
-    const res = await api.post<boolean>("/user/create", user, { withCredentials: true })
-    return res.status == 200;
+    try {
+        const res = await api.post<boolean>("/user/create", user, { withCredentials: true });
+        return res.status === 200;
+    } catch (err) {
+        console.log(err);
+        return false;
+    }
 }
 
 export { loginUser, logoutUser, registerUser, checkAuth, updatePassword, getAllUser, deleteUser, editWholeUser, createUser };
