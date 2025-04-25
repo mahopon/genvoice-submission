@@ -15,7 +15,9 @@ func main() {
 	repo.InitDB(os.Getenv("DB_URL"))
 	e := echo.New()
 	route.RegisterRoutes(e)
-	// e.Use(middleware.CORS())
+	if os.Getenv("ENV") == "DEV" {
+		e.Use(middleware.CORS())
+	}
 	e.Use(middleware.LogResponseTimeMiddleware)
 	e.Pre(emw.RemoveTrailingSlash())
 	e.Logger.Fatal(e.Start(":8080"))
