@@ -7,12 +7,13 @@ import (
 )
 
 type CreateSurveyRequest struct {
-	SurveyID uuid.UUID `json:"survey_id,omitempty"`
+	SurveyID uuid.UUID // Injected
 	UserID   uuid.UUID `json:"user_id"`
 	Name     string    `json:"name"`
 }
 
 type CreateQuestionRequest struct {
+	UserID   uuid.UUID // Injected
 	SurveyID uuid.UUID `json:"survey_id"`
 	Question string    `json:"question"`
 }

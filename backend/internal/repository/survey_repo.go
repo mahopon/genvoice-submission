@@ -13,11 +13,11 @@ func CreateSurvey(survey *model.Survey) error {
 }
 
 // CreateQuestion creates a new question for a survey in the database.
-func CreateQuestion(questions []*model.Question) error {
-	if len(questions) == 0 {
+func CreateQuestion(questions *[]*model.Question) error {
+	if len(*questions) == 0 {
 		return nil
 	}
-	return db.Create(&questions).Error
+	return db.Create(*questions).Error
 }
 
 // CreateAnswer creates a new answer for a question in the database.

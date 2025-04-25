@@ -17,7 +17,7 @@ func NewSurveyService() service.SurveyService {
 	return &surveyService{}
 }
 
-func (s *surveyService) CreateSurvey(newSurvey model.CreateSurveyRequest) (uuid.UUID, error) {
+func (s *surveyService) CreateSurvey(newSurvey *model.CreateSurveyRequest) (uuid.UUID, error) {
 	survey := &model.Survey{
 		CreatedBy: newSurvey.UserID,
 		Name:      newSurvey.Name,
@@ -29,17 +29,17 @@ func (s *surveyService) CreateSurvey(newSurvey model.CreateSurveyRequest) (uuid.
 	return survey.ID, nil
 }
 
-func (s *surveyService) CreateQuestion(newQuestions []model.CreateQuestionRequest) error {
+func (s *surveyService) CreateQuestion(newQuestions *[]model.CreateQuestionRequest) error {
 	var questions []*model.Question
 
-	for _, q := range newQuestions {
+	for _, q := range *newQuestions {
 		questions = append(questions, &model.Question{
 			Question: q.Question,
 			SurveyID: q.SurveyID,
 		})
 	}
 
-	if err := repo.CreateQuestion(questions); err != nil {
+	if err := repo.CreateQuestion(&questions); err != nil {
 		log.Println("CreateQuestions error:", err)
 		return fmt.Errorf("failed to create questions: %v", err)
 	}
@@ -47,7 +47,7 @@ func (s *surveyService) CreateQuestion(newQuestions []model.CreateQuestionReques
 	return nil
 }
 
-func (s *surveyService) CreateAnswer(userId uuid.UUID, newAnswer model.CreateAnswerRequest) error {
+func (s *surveyService) CreateAnswer(userId uuid.UUID, newAnswer *model.CreateAnswerRequest) error {
 	ans, err := util.DecodeAnswerFromBase64(newAnswer.Answer)
 	if err != nil {
 		log.Println("DecodeAnswerFromBase64 error:", err)
@@ -79,7 +79,7 @@ func (s *surveyService) GetSurveysDoneByUser(userId uuid.UUID) ([]*model.SurveyR
 	return transformUserSurveys, transformOtherSurveys, nil
 }
 
-func (s *surveyService) GetAnswers(surveyID uuid.UUID, questionID int) ([]model.AnswerResponse, error) {
+func (s *surveyService) GetAnswers(surveyID uuid.UUID, questionID int) (*[]model.AnswerResponse, error) {
 	answers, err := repo.GetAnswersBySurveyIDAndQuestionID(surveyID, questionID)
 	if err != nil {
 		log.Println("GetAnswersBySurveyIDAndQuestionID error:", err)
@@ -97,7 +97,7 @@ func (s *surveyService) GetAnswers(surveyID uuid.UUID, questionID int) ([]model.
 		})
 	}
 
-	return response, nil
+	return &response, nil
 }
 
 func (s *surveyService) GetAnswersByUser(userID uuid.UUID) ([]model.AnswerResponse, error) {
@@ -121,7 +121,7 @@ func (s *surveyService) GetAnswersByUser(userID uuid.UUID) ([]model.AnswerRespon
 	return response, nil
 }
 
-func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req model.CreateAnswerRequest) error {
+func (s *surveyService) DeleteAnswerByUser(userId uuid.UUID, req *model.CreateAnswerRequest) error {
 	err := repo.DeleteAnswer(userId, req.SurveyID, req.QuestionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete answer")
