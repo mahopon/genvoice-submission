@@ -1,9 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import createAuthRefreshInterceptor from 'axios-auth-refresh';
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 const api: AxiosInstance = axios.create({
-  baseURL: 'https://tcyao.com/api',
+  baseURL: API_URL,
 });
 
 // Refresh logic to handle token refresh
@@ -11,7 +12,7 @@ const refreshAuthLogic = (failedRequest: { response: { config: AxiosRequestConfi
   if (failedRequest.response && failedRequest.response.config) {
     return axios
       // Refresh token request using cookie
-      .get<{ accessToken: string }>('https://tcyao.com/api/user/refresh', { withCredentials: true })
+      .get<{ accessToken: string }>(API_URL + '/user/refresh', { withCredentials: true })
       .then((response) => {
         console.log(response);
         return Promise.resolve();
