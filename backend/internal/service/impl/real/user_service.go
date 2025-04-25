@@ -2,7 +2,7 @@ package real
 
 import (
 	"backend/internal/model"
-	"backend/internal/repository"
+	repo "backend/internal/repository"
 	"backend/internal/service"
 	"backend/internal/util"
 	"errors"
@@ -17,7 +17,7 @@ func NewUserService() service.UserService {
 }
 
 func (s *userService) LoginUser(user *model.LoginUserRequest) (*model.User, error) {
-	dbUser, err := repository.GetUserByUsername(user.Username)
+	dbUser, err := repo.GetUserByUsername(user.Username)
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +56,11 @@ func (s *userService) RegisterUser(user *model.CreateUserRequest) error {
 		Role:     role,
 	}
 
-	return repository.CreateUser(newUser)
+	return repo.CreateUser(newUser)
 }
 
 func (s *userService) UpdateUser(id uuid.UUID, update *model.UpdateUserPasswordRequest) error {
-	existingUser, err := repository.GetUserByID(id)
+	existingUser, err := repo.GetUserByID(id)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (s *userService) UpdateUser(id uuid.UUID, update *model.UpdateUserPasswordR
 	newPassword, salt, _ := util.GenerateFromPassword(update.NewPassword)
 	stitchedNewPassword := salt + ":" + newPassword
 
-	err = repository.UpdateUser(existingUser.ID, stitchedNewPassword)
+	err = repo.UpdateUser(existingUser.ID, stitchedNewPassword)
 	if err != nil {
 		return err
 	}
@@ -88,12 +88,12 @@ func (s *userService) DeleteUser(id string) error {
 	if err != nil {
 		return err
 	}
-	return repository.DeleteUser(userID)
+	return repo.DeleteUser(userID)
 }
 
 func (s *userService) GetUser(id uuid.UUID) (*model.GetUserResponse, error) {
 
-	user, err := repository.GetUserByID(id)
+	user, err := repo.GetUserByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s *userService) GetUser(id uuid.UUID) (*model.GetUserResponse, error) {
 
 func (s *userService) GetAllUser() (*[]model.User, error) {
 	var users *[]model.User
-	users, err := repository.GetAllUser()
+	users, err := repo.GetAllUser()
 	if err != nil {
 		return nil, errors.New("internal error")
 	}
@@ -121,9 +121,20 @@ func (s *userService) UpdateWholeUser(userId string, request *model.UpdateUserRe
 		request.Password = salt + ":" + hash
 	}
 
-	err := repository.UpdateWholeUser(parsedID, request)
+	err := repo.UpdateWholeUser(parsedID, request)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (s *userService) CheckAdminRole(userId uuid.UUID) error {
+	role, err := repo.GetRole(userId)
+	if err != nil {
+		return errors.New("invalid user")
+	}
+	if role != "ADMIN" {
+		return errors.New("invalid request")
 	}
 	return nil
 }

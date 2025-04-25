@@ -14,4 +14,5 @@ type UserService interface {
 	DeleteUser(id string) error
 	GetUser(id uuid.UUID) (*model.GetUserResponse, error)
 	GetAllUser() (*[]model.User, error)
+	CheckAdminRole(userId uuid.UUID) error
 }

@@ -69,3 +69,11 @@ func DeleteUser(id uuid.UUID) error {
 	}
 	return nil
 }
+
+func GetRole(id uuid.UUID) (string, error) {
+	var user model.User
+	if err := db.Where("ID = ?", id).First(&user).Error; err != nil {
+		return "", err
+	}
+	return user.Role, nil
+}

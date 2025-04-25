@@ -213,13 +213,19 @@ func (c *UserController) GetAllUser(ctx echo.Context) error {
 }
 
 func (c *UserController) UpdateWholeUser(ctx echo.Context) error {
+	requestingUUID, _ := util.GetUUIDFromContext(ctx)
+	err := c.UserService.CheckAdminRole(requestingUUID)
+	if err != nil {
+		return echo.ErrBadRequest
+	}
+
 	var req model.UpdateUserRequest
-	if err := ctx.Bind(&req); err != nil {
+	if err = ctx.Bind(&req); err != nil {
 		return echo.ErrBadRequest
 	}
 	id := ctx.Param("userId")
 
-	err := c.UserService.UpdateWholeUser(id, &req)
+	err = c.UserService.UpdateWholeUser(id, &req)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}
