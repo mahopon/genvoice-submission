@@ -14,6 +14,11 @@ type LoginUserRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type LoginUserResponse struct {
+	ID   uuid.UUID `json:"id"`
+	Role string    `json:"role"`
+}
+
 type UpdateUserPasswordRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password"`

@@ -21,13 +21,19 @@ func NewUserController(s service.UserService) *UserController {
 
 func (c *UserController) GetUser(ctx echo.Context) error {
 	id := ctx.Param("id")
-	user, err := c.UserService.GetUser(id)
+	parsedUUID, err := uuid.Parse(id)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid id"})
+	}
+
+	user, err := c.UserService.GetUser(parsedUUID)
 	if err != nil || user == nil {
 		return ctx.JSON(http.StatusBadRequest, nil)
 	}
 	return ctx.JSON(http.StatusOK, user)
 }
 
+// Login is NOT a protected route, in the event that frontend fails to handle access, the user will be logged in
 func (c *UserController) LoginUser(ctx echo.Context) error {
 	// Check if a valid JWT is present in the cookies
 	tokenCookie, err := ctx.Request().Cookie("access_token")
@@ -36,7 +42,8 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 		claims, err := util.ValidateJWT(tokenCookie.Value)
 		if err == nil {
 			// JWT is valid, skip the login and return the user details
-			dbUser, err := c.UserService.GetUser(claims.Subject)
+			parsedUUID, _ := uuid.Parse(claims.Subject)
+			dbUser, err := c.UserService.GetUser(parsedUUID)
 			if err != nil {
 				return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
 			}
@@ -54,7 +61,7 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
-	dbUser, err := c.UserService.LoginUser(user)
+	dbUser, err := c.UserService.LoginUser(&user)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
@@ -64,13 +71,13 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 
 	c.setTokenCookies(ctx, accessToken, refreshToken)
 
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"id":   dbUser.ID,
-		"name": dbUser.Name,
-		"role": dbUser.Role,
+	return ctx.JSON(http.StatusOK, &model.LoginUserResponse{
+		ID:   dbUser.ID,
+		Role: dbUser.Role,
 	})
 }
 
+// Refresh is not protected, validates and refreshes tokens accordingly
 func (c *UserController) Refresh(ctx echo.Context) error {
 	cookie, err := ctx.Cookie("refresh_token")
 	var tokenToRefresh bool = false // False for access, true for refresh
@@ -83,22 +90,17 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 		}
 	}
 
-	token, err := util.ValidateJWT(cookie.Value)
+	claims, err := util.ValidateJWT(cookie.Value)
 	if err != nil {
 		log.Printf("Err: %v, uuid", err)
 		util.ClearTokens(ctx)
 		return echo.ErrUnauthorized
 	}
 
-	userID, err := uuid.Parse(token.Subject)
-	if err != nil {
-		log.Printf("Err: %v, uuid", err)
-		util.ClearTokens(ctx)
-		return echo.ErrUnauthorized
-	}
+	userID, _ := uuid.Parse(claims.Subject)
 
 	if tokenToRefresh {
-		accessToken, _ := util.CreateRefreshToken(userID, token.Role)
+		accessToken, _ := util.CreateRefreshToken(userID, claims.Role)
 		ctx.SetCookie(&http.Cookie{
 			Name:     "refresh_token",
 			Value:    accessToken,
@@ -109,7 +111,7 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 			Expires:  time.Now().Add(24 * time.Hour),
 		})
 	} else {
-		accessToken, _ := util.CreateAccessToken(userID, token.Role)
+		accessToken, _ := util.CreateAccessToken(userID, claims.Role)
 		ctx.SetCookie(&http.Cookie{
 			Name:     "access_token",
 			Value:    accessToken,
@@ -121,9 +123,7 @@ func (c *UserController) Refresh(ctx echo.Context) error {
 		})
 	}
 
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"role": token.Role,
-	})
+	return ctx.NoContent(http.StatusOK)
 }
 
 func (c *UserController) Logout(ctx echo.Context) error {
@@ -136,7 +136,7 @@ func (c *UserController) RegisterUser(ctx echo.Context) error {
 	if err := ctx.Bind(&user); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
-	if err := c.UserService.RegisterUser(user); err != nil {
+	if err := c.UserService.RegisterUser(&user); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Please choose another username"})
 	}
 	return ctx.JSON(http.StatusOK, nil)
@@ -156,23 +156,24 @@ func (c *UserController) UpdateUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
-	tokenCookie, err := ctx.Request().Cookie("access_token")
+	// Parse UUID for user requested for update
+	parsedRequestedUUID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
 	}
 
-	claims, err := util.ValidateJWT(tokenCookie.Value)
-	if err != nil {
-		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+	// Parse UUID for user requesting the update
+	parsedRequesterUUID, _ := util.GetUUIDFromContext(ctx)
+	// Reject if the two UUID doesn't match
+	if parsedRequesterUUID != parsedRequestedUUID {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
 	}
 
-	if claims.Subject == ctx.Param("id") || claims.Role == "ADMIN" {
-		if err := c.UserService.UpdateUser(ctx.Param("id"), password); err != nil {
-			if err.Error() == "current password wrong" {
-				return ctx.JSON(http.StatusBadRequest, err.Error())
-			} else {
-				return echo.ErrInternalServerError
-			}
+	if err := c.UserService.UpdateUser(parsedRequestedUUID, &password); err != nil {
+		if err.Error() == "current password wrong" {
+			return ctx.JSON(http.StatusBadRequest, err.Error())
+		} else {
+			return echo.ErrInternalServerError
 		}
 	}
 
@@ -218,7 +219,7 @@ func (c *UserController) UpdateWholeUser(ctx echo.Context) error {
 	}
 	id := ctx.Param("userId")
 
-	err := c.UserService.UpdateWholeUser(id, req)
+	err := c.UserService.UpdateWholeUser(id, &req)
 	if err != nil {
 		return echo.ErrInternalServerError
 	}

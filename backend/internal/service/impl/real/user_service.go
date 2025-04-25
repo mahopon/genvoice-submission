@@ -16,7 +16,7 @@ func NewUserService() service.UserService {
 	return &userService{}
 }
 
-func (s *userService) LoginUser(user model.LoginUserRequest) (*model.User, error) {
+func (s *userService) LoginUser(user *model.LoginUserRequest) (*model.User, error) {
 	dbUser, err := repository.GetUserByUsername(user.Username)
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (s *userService) LoginUser(user model.LoginUserRequest) (*model.User, error
 	return dbUser, nil
 }
 
-func (s *userService) RegisterUser(user model.CreateUserRequest) error {
+func (s *userService) RegisterUser(user *model.CreateUserRequest) error {
 	hash, salt, err := util.GenerateFromPassword(user.Password)
 	if err != nil {
 		return err
@@ -59,13 +59,8 @@ func (s *userService) RegisterUser(user model.CreateUserRequest) error {
 	return repository.CreateUser(newUser)
 }
 
-func (s *userService) UpdateUser(id string, update model.UpdateUserPasswordRequest) error {
-	userID, err := uuid.Parse(id)
-	if err != nil {
-		return err
-	}
-
-	existingUser, err := repository.GetUserByID(userID)
+func (s *userService) UpdateUser(id uuid.UUID, update *model.UpdateUserPasswordRequest) error {
+	existingUser, err := repository.GetUserByID(id)
 	if err != nil {
 		return err
 	}
@@ -96,13 +91,9 @@ func (s *userService) DeleteUser(id string) error {
 	return repository.DeleteUser(userID)
 }
 
-func (s *userService) GetUser(id string) (*model.GetUserResponse, error) {
-	userID, err := uuid.Parse(id)
-	if err != nil {
-		return nil, err
-	}
+func (s *userService) GetUser(id uuid.UUID) (*model.GetUserResponse, error) {
 
-	user, err := repository.GetUserByID(userID)
+	user, err := repository.GetUserByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +113,7 @@ func (s *userService) GetAllUser() (*[]model.User, error) {
 	return users, nil
 }
 
-func (s *userService) UpdateWholeUser(userId string, request model.UpdateUserRequest) error {
+func (s *userService) UpdateWholeUser(userId string, request *model.UpdateUserRequest) error {
 	parsedID, _ := uuid.Parse(userId)
 
 	if request.Password != "" {
@@ -130,7 +121,7 @@ func (s *userService) UpdateWholeUser(userId string, request model.UpdateUserReq
 		request.Password = salt + ":" + hash
 	}
 
-	err := repository.UpdateWholeUser(parsedID, &request)
+	err := repository.UpdateWholeUser(parsedID, request)
 	if err != nil {
 		return err
 	}
