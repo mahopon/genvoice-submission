@@ -137,7 +137,7 @@ func (c *UserController) RegisterUser(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request format"})
 	}
 	if err := c.UserService.RegisterUser(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Please choose another username"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Username taken. Choose another username."})
 	}
 	return ctx.NoContent(http.StatusOK)
 }

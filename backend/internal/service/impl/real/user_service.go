@@ -36,10 +36,7 @@ func (s *userService) LoginUser(user *model.LoginUserRequest) (*model.User, erro
 }
 
 func (s *userService) RegisterUser(user *model.CreateUserRequest) error {
-	hash, salt, err := util.GenerateFromPassword(user.Password)
-	if err != nil {
-		return err
-	}
+	hash, salt, _ := util.GenerateFromPassword(user.Password)
 
 	var role string
 	if user.Role == "" {
@@ -56,7 +53,12 @@ func (s *userService) RegisterUser(user *model.CreateUserRequest) error {
 		Role:     role,
 	}
 
-	return repo.CreateUser(newUser)
+	err := repo.CreateUser(newUser)
+	if err != nil {
+		return errors.New("user exists")
+	}
+
+	return nil
 }
 
 func (s *userService) UpdateUser(id uuid.UUID, update *model.UpdateUserPasswordRequest) error {
