@@ -13,11 +13,9 @@ const refreshAuthLogic = (failedRequest: { response: { config: AxiosRequestConfi
     return axios
       // Refresh token request using cookie
       .get<{ accessToken: string }>(API_URL + '/user/refresh', { withCredentials: true })
-      .then((response) => {
-        console.log(response);
+      .then(() => {
         return Promise.resolve();
-      }).catch((err) => {
-        console.log(err);
+      }).catch(() => {
         return Promise.reject();
       });
   }

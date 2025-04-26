@@ -8,7 +8,7 @@ type ApiError = {
 const handleApiError = (error: unknown): never => {
     if (axios.isAxiosError(error)) {
         const status = error.response?.status ?? 500;
-        const message = error.response?.data ?? "An unknown error occurred.";
+        const message = (error.response?.data.message || error.response?.data) ?? "An unknown error occurred.";
         throw { status, message };
     }
     throw { status: 500, message: "An unknown error occurred." };

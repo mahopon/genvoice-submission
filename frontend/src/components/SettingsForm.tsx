@@ -3,6 +3,7 @@ import { Form, Input, Button, message } from 'antd';
 import { PasswordChangeRequest } from '../types/User';
 import { updatePassword } from '../api/UserAPI';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../utils/APIerror';
 
 const SettingsForm: React.FC = () => {
     const { userId } = useAuth();
@@ -18,12 +19,13 @@ const SettingsForm: React.FC = () => {
             current_password: values.currentPassword,
             new_password: values.newPassword
         };
-        const success = await updatePassword(userId!, req);
-        if (success) {
+        try {
+            await updatePassword(userId!, req);
             message.success("Password updated successfully");
             form.resetFields();
-        } else {
-            message.error(`Failed to update password. Check current password.`);
+        } catch (err) {
+            const castedErr = err as ApiError;
+            message.error(`Couldn't update password. ${castedErr.message}`);
         }
     };
 

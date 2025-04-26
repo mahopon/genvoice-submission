@@ -2,6 +2,7 @@ import React from "react";
 import { Modal, Input, Form, Select, message } from "antd";
 import { UserCreateRequest } from "../types/User";
 import { createUser } from "../api/UserAPI";
+import { ApiError } from "../utils/APIerror";
 
 const { Option } = Select;
 
@@ -23,12 +24,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ visible, onCancel, onSubmit
                 password: values.password,
                 role: values.role,
             };
-            const res = await createUser(newUser);
-            if (res) {
+            try {
+                await createUser(newUser);
                 onSubmit();
                 form.resetFields();
-            } else {
-                messageApi.error("Username taken. Choose another username!");
+            } catch (err) {
+                const castedErr = err as ApiError;
+                messageApi.error(`Unable to register. ${castedErr}`);
             }
         });
     };

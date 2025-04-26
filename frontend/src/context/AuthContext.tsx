@@ -23,10 +23,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     useEffect(() => {
         const authenticateUser = async () => {
-            const authData = await checkAuth();
-            setAuthStatus(authData.isAuthenticated);
-            setRole(authData.role.toUpperCase());
-            setUserId(authData.userId);
+            try {
+                const authData = await checkAuth();
+                setAuthStatus(true);
+                setRole(authData.role.toUpperCase());
+                setUserId(authData.user_id);
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (err) {
+                setAuthStatus(false);
+                setRole(null);
+                setUserId(null);
+            }
+
         };
         authenticateUser();
     }, []);

@@ -4,19 +4,23 @@ import SurveyTable from '../components/SurveyTable';
 import { CollatedSurveyResponse, SurveyResponse } from '../types/Survey';
 import AddSurveyButton from '../components/AddSurveyButton';
 import { useAuth } from '../context/AuthContext';
+import { message } from "antd";
+import { ApiError } from '../utils/APIerror';
 
 const Home: React.FC = () => {
   const [userSurveys, setUserSurveys] = useState<SurveyResponse[]>([]);
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
   const { isAuthenticated } = useAuth();
+  const [messageApi, contextHolder] = message.useMessage();
 
   const fetchSurveys = async () => {
     try {
       const fetchedSurveys: CollatedSurveyResponse = await getSurveys();
       setUserSurveys(fetchedSurveys.user_made);
       setSurveys(fetchedSurveys.others_made)
-    } catch (error) {
-      console.error("Error fetching surveys:", error);
+    } catch (err) {
+      const castedErr = err as ApiError;
+      messageApi.error(`${castedErr.message}. (Status; ${castedErr.status})`)
     }
   };
 
@@ -27,6 +31,7 @@ const Home: React.FC = () => {
 
   return (
     <>
+      {contextHolder}
       {!isAuthenticated ?
         (
           <>

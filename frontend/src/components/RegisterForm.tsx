@@ -3,6 +3,7 @@ import { Form, Input, Button, message } from "antd";
 import { loginUser, registerUser } from "../api/UserAPI";
 import { RegisterUserRequest, UserLoginRequest, UserLoginResponse, } from "../types/User";
 import { useAuth } from "../context/AuthContext";
+import { ApiError } from "../utils/APIerror";
 
 interface Props {
     setRegistered: (value: boolean) => void;
@@ -14,7 +15,7 @@ const RegistrationForm: React.FC<Props> = ({ setRegistered }) => {
     const [messageApi, contextHolder] = message.useMessage();
 
     const { setAuthStatus, setRole, setUserId } = useAuth();
-    const onFinish = (values: RegisterUserRequest) => {
+    const onFinish = async (values: RegisterUserRequest) => {
         console.log("Form Submitted:", values);
         const name = values.name;
         const username = values.username
@@ -25,25 +26,32 @@ const RegistrationForm: React.FC<Props> = ({ setRegistered }) => {
             return;
         }
         const newUser: RegisterUserRequest = {
-            name: name as string,
-            username: username as string,
-            password: password as string,
+            name: name,
+            username: username,
+            password: password,
         };
-        registerUser(newUser).then(() => {
-            const login: UserLoginRequest = {
-                username: newUser.username,
-                password: newUser.password
-            }
-            loginUser(login).then((res: UserLoginResponse | false) => {
+
+        try {
+            await registerUser(newUser);
+            try {
+                const login: UserLoginRequest = {
+                    username: newUser.username,
+                    password: newUser.password
+                }
+                const res: UserLoginResponse = await loginUser(login);
                 setAuthStatus(true);
-                setRole((res as UserLoginResponse).role);
-                setUserId((res as UserLoginResponse).id);
+                setRole(res.role);
+                setUserId(res.id);
                 messageApi.success("Registered and logged in");
-            })
-            setRegistered(true);
-        }).catch((err) => {
-            messageApi.error(`Unable to register. ${err.response.data.error}`);
-        });
+                setRegistered(true);
+            } catch (err) {
+                const castedErr = err as ApiError;
+                messageApi.error(`Unable to login. ${castedErr.message}`);
+            }
+        } catch (err) {
+            const castedErr = err as ApiError;
+            messageApi.error(`Unable to register. ${castedErr.message}`);
+        }
     };
 
 

@@ -4,6 +4,7 @@ import { loginUser } from '../api/UserAPI'
 import { UserLoginRequest } from '../types/User';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../utils/APIerror';
 
 interface FormValues {
   username: string;
@@ -23,8 +24,8 @@ const LoginForm: React.FC = () => {
       password: values.password
     };
 
-    const loginResult = await loginUser(details);
-    if (loginResult) {
+    try {
+      const loginResult = await loginUser(details);
       messageApi.success('Successfully logged in!');
       setTimeout(() => {
         setAuthStatus(true);
@@ -32,9 +33,10 @@ const LoginForm: React.FC = () => {
         setUserId(loginResult.id);
         navigate("/");
       }, 1000);
-    } else {
+    } catch (err) {
+      const castedErr = err as ApiError;
       setSubmitted(false);
-      messageApi.error('Login failed. Please try again.');
+      messageApi.error(`Login failed: ${castedErr.message} (Status: ${castedErr.status})`)
     }
   };
 

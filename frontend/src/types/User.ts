@@ -43,3 +43,8 @@ export type UserCreateRequest = {
     password?: string;
     role: string;
 }
+
+export type AuthResponse = {
+    role: string;
+    user_id: string;
+}

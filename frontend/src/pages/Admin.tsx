@@ -17,7 +17,7 @@ const Admin: React.FC = () => {
       console.log('User is not admin role, redirecting...');
       navigate('/');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, role]);
 
   return (
     <UserTable />
