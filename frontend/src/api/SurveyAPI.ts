@@ -1,30 +1,47 @@
-import { CreateSurveyRequest, CreateQuestionRequest, CreateAnswerRequest, CollatedSurveyResponse } from "../types/Survey";
-import api from "./Interceptors"
+import { CreateSurveyRequest, CreateQuestionRequest, CreateAnswerRequest, CollatedSurveyResponse, CreateSurveyResponse } from "../types/Survey";
+import api from "./Interceptors";
+import { handleApiError } from "../utils/APIerror";
 
-const createSurvey = async (req: CreateSurveyRequest) => {
-    const res = await api.post("/survey", req, { withCredentials: true });
-    return res.data;
+const createSurvey = async (req: CreateSurveyRequest): Promise<CreateSurveyResponse> => {
+    try {
+        const { data } = await api.post<CreateSurveyResponse>("/survey", req, { withCredentials: true });
+        return data;
+    } catch (error) {
+        return handleApiError(error);
+    }
 };
 
-const createQuestion = async (req: CreateQuestionRequest[]) => {
-    const res = await api.post("/survey/question", req, { withCredentials: true });
-    return res.data;
+const createQuestion = async (questions: CreateQuestionRequest[]): Promise<void> => {
+    try {
+        await api.post("/survey/question", questions, { withCredentials: true });
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
-const submitAnswer = async (req: CreateAnswerRequest[]) => {
-    console.log(req);
-    const res = await api.post("/survey/answer", req, { withCredentials: true });
-    return res.data;
+const submitAnswer = async (answers: CreateAnswerRequest[]): Promise<void> => {
+    try {
+        await api.post("/survey/answer", answers, { withCredentials: true });
+    } catch (error) {
+        handleApiError(error);
+    }
 };
 
 const getSurveys = async (): Promise<CollatedSurveyResponse> => {
-    const res = await api.get("/survey", { withCredentials: true });
-    return res.data;
-}
+    try {
+        const { data } = await api.get<CollatedSurveyResponse>("/survey", { withCredentials: true });
+        return data;
+    } catch (error) {
+        return handleApiError(error);
+    }
+};
 
-const deleteSurvey = async (surveyId: string) => {
-    const res = await api.delete("/survey/delete/" + surveyId, { withCredentials: true });
-    return res.status == 200;
-}
+const deleteSurvey = async (surveyId: string): Promise<void> => {
+    try {
+        await api.delete(`/survey/delete/${surveyId}`, { withCredentials: true });
+    } catch (error) {
+        handleApiError(error);
+    }
+};
 
-export { createSurvey, createQuestion, submitAnswer, getSurveys, deleteSurvey };
+export { deleteSurvey, getSurveys, submitAnswer, createQuestion, createSurvey };
