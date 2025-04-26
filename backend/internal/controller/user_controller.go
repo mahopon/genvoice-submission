@@ -23,7 +23,7 @@ func (c *UserController) GetUser(ctx echo.Context) error {
 	id := ctx.Param("id")
 	parsedUUID, err := uuid.Parse(id)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid id"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid id"})
 	}
 
 	user, err := c.UserService.GetUser(parsedUUID)
@@ -45,7 +45,7 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 			parsedUUID, _ := uuid.Parse(claims.Subject)
 			dbUser, err := c.UserService.GetUser(parsedUUID)
 			if err != nil {
-				return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid credentials"})
+				return ctx.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid credentials"})
 			}
 
 			// Return the user data
@@ -58,12 +58,12 @@ func (c *UserController) LoginUser(ctx echo.Context) error {
 
 	var user model.LoginUserRequest
 	if err := ctx.Bind(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request format"})
 	}
 
 	dbUser, err := c.UserService.LoginUser(&user)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
 
 	accessToken, _ := util.CreateAccessToken(dbUser.ID, dbUser.Role)
@@ -134,44 +134,44 @@ func (c *UserController) Logout(ctx echo.Context) error {
 func (c *UserController) RegisterUser(ctx echo.Context) error {
 	var user model.CreateUserRequest
 	if err := ctx.Bind(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request format"})
 	}
 	if err := c.UserService.RegisterUser(&user); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Please choose another username"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Please choose another username"})
 	}
-	return ctx.JSON(http.StatusOK, nil)
+	return ctx.NoContent(http.StatusOK)
 }
 
 func (c *UserController) DeleteUser(ctx echo.Context) error {
 	if err := c.UserService.DeleteUser(ctx.Param("userId")); err != nil {
 		return echo.ErrBadRequest
 	}
-	return ctx.JSON(http.StatusOK, nil)
+	return ctx.NoContent(http.StatusOK)
 }
 
 func (c *UserController) UpdateUser(ctx echo.Context) error {
 	var password model.UpdateUserPasswordRequest
 
 	if err := ctx.Bind(&password); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request format"})
 	}
 
 	// Parse UUID for user requested for update
 	parsedRequestedUUID, err := uuid.Parse(ctx.Param("id"))
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request format"})
 	}
 
 	// Parse UUID for user requesting the update
 	parsedRequesterUUID, _ := util.GetUUIDFromContext(ctx)
 	// Reject if the two UUID doesn't match
 	if parsedRequesterUUID != parsedRequestedUUID {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request"})
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Invalid request"})
 	}
 
 	if err := c.UserService.UpdateUser(parsedRequestedUUID, &password); err != nil {
 		if err.Error() == "current password wrong" {
-			return ctx.JSON(http.StatusBadRequest, err.Error())
+			return ctx.JSON(http.StatusBadRequest, echo.Map{"message": "Wrong current password"})
 		} else {
 			return echo.ErrInternalServerError
 		}
@@ -192,12 +192,12 @@ func (c *UserController) CheckAuthStatus(ctx echo.Context) error {
 
 			return ctx.JSON(http.StatusOK, echo.Map{"role": claims.Role, "user_id": claims.Subject})
 		}
-		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid access token"})
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"message": "Invalid access token"})
 	}
 
 	_, err = ctx.Request().Cookie("refresh_token")
 	if err != nil {
-		return ctx.JSON(http.StatusUnauthorized, echo.Map{"error": "Not authenticated"})
+		return ctx.JSON(http.StatusUnauthorized, echo.Map{"message": "Not authenticated"})
 	}
 
 	return ctx.Redirect(http.StatusFound, "/api/user/refresh")
